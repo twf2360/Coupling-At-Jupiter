@@ -5,6 +5,7 @@
 </p>
 
 ## MPhys Project - Coupling at Jupiter
-
-Jupiter is one of the most fascinating bodies in the solar system - in part due to it's massive size and mass. Jupiter's magnetosphere is the largest object in the solar system, spanning hundreds of jovian radii. Io, a volcanic moon of Jupiter ejects one ton/s of neutral material into the magnetosphere. As this material is ionised, it is picked up by the magnetosphere, and sent outwards. 
  
+Magnetic fields play a pivotal role throughout space, as all charged particles feel their effects. A planet with a large enough internally generated magnetic field will form a magnetosphere - a magnetic field that dominates in the region of space surrounding the planet. The magnetosphere of Jupiter is a fascinating environment: the enormity of the planet - both its mass, and its magnetic field - combined with fast axial rotation, and a complex satellite system leads to unique interactions not seen anywhere else in the solar system. 
+
+The objective of this project is to build a model the magnetosphere of Jupiter, particulalry looking at the effect of the asymmetric rotation, and dipole field axis which are offset by approximately 9&deg;. 
