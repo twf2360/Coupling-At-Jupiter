@@ -74,18 +74,19 @@ class plot:
         points = np.load("simpleRotationsOutput.npy")
         Transposed_points = np.transpose(points)
         if plottype == 'animate':
-            
+            plt.style.use('dark_background')
             fig = plt.figure() 
             ax = plt.axes(xlim=(-1e9, 1e9), ylim=(-1e9, 1e9)) 
             ax.spines['left'].set_position('center')
             ax.spines['bottom'].set_position('center')
-            # Eliminate upper and right axes
             ax.spines['right'].set_color('none')
             ax.spines['top'].set_color('none')
             ax.xaxis.set_ticks_position('bottom')
             ax.yaxis.set_ticks_position('left')
             #ax.add_patch(Circle((0,0), Rj, color='y', zorder=100, label = "Jupiter")) <- add the central body in
             line, = ax.plot([], [], 'o-')
+            time_template = 'time ={}s'
+            time_text = ax.text(0.05,0.9, '', transform=ax.transAxes)
 
             def animate_init():
                 line.set_data([], [])
@@ -94,15 +95,17 @@ class plot:
                 x = Transposed_points[0][i]
                 y = Transposed_points[1][i]
                 line.set_data(x,y)
+                time_text.set_text(time_template.format(i*100)) #need to update this so that it actually changes if you change the timestep
                 #print(Transposed_points[0], Transposed_points[0][i])
-                return line,
+                return line, time_text
 
             anim = FuncAnimation(fig, animate, init_func=animate_init,frames=200, interval=20, blit=True)
             plt.show()
+            anim.save('SimpleCoroAnim.gif')
 
 '''
 test = orbiter(422e6, Tj)
-test.calc(5000, 100)
+test.calc(10000, 100)
 '''
 
 plottest = plot()
