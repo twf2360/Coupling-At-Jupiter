@@ -64,11 +64,11 @@ class orbiter:
             self.UpdatePosition(timestep)
         positions = np.array(positions) #need a way to save the names, and thge location of the central body too :D 
 
-        np.save("simpleRotationsOutput.npy", positions, allow_pickle=True)
+        np.save("data/simpleRotationsOutput.npy", positions, allow_pickle=True)
 
 class plot:
     def __init__(self, plottype = 'animate'):
-        if not os.path.exists("simpleRotationsOutput.npy"):
+        if not os.path.exists("data/simpleRotationsOutput.npy"):
             print('no file to plot')
             sys.exit()
         points = np.load("simpleRotationsOutput.npy")
@@ -101,12 +101,12 @@ class plot:
 
             anim = FuncAnimation(fig, animate, init_func=animate_init,frames=200, interval=20, blit=True)
             plt.show()
-            anim.save('SimpleCoroAnim.gif')
+            anim.save('images/SimpleCoroAnim.gif')
 
-'''
+
 test = orbiter(422e6, Tj)
 test.calc(10000, 100)
-'''
+
 
 plottest = plot()
 
