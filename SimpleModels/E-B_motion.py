@@ -79,7 +79,7 @@ class motion:
         b = self.Bfield.B
         m = self.particle.mass
 
-        F = q*(e + np.cross(v, v))
+        F = q*(e + np.cross(v, b))
         a = F/m 
         dv = a * self.timestep
         return dv
