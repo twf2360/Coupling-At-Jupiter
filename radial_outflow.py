@@ -94,12 +94,37 @@ class radialOutflow:
         np.save("data/radial_flow/local_alfven.npy", alfven_vel_values, allow_pickle=True)
         np.save("data/radial_flow/flow_velocity.npy", flow_values, allow_pickle=True)
         np.save("data/radial_flow/r_values.npy", r_values, allow_pickle=True)
+        self.va_values = alfven_vel_values
+        self.v_values = flow_values
+        self.r_values = r_values
 
+    def plot():
+        '''
+        requires there to be data already - plots outflow velocity against radial distance
+        '''
+        va_values = self.va_values
+        r_values = self.r_values
+        Rj_values = r_values/Rj
+        v_values = self.v_values
+        fig, ax = plt.subplots()
+        ax.set(xlabel = 'Radial Distance (RJ)', ylabel = 'v')
+        for key in v_values:
+            ax.plot(Rj_values, v_values[key], label = 'mdot ='.format(key))
+        ax.plot(Rj_values, va_values, label = 'local alfven velocity')
+        plt.show()
+        plt.savefig('images/radial_flow_plot.png')
 
+        
+            
+ 
+
+'''
 def testplot():
     '''
+'''
     requires there to be saved data already - plots outflow velocity against radial distance
     '''
+'''
     va_values = np.load("data/radial_flow/local_alfven.npy")
     r_values = np.load("data/radial_flow/r_values.npy")
     Rj_values = r_values/Rj
@@ -114,7 +139,7 @@ def testplot():
 
         
             
-          
+    '''   
 
 
 

@@ -1,5 +1,5 @@
 """
-Tracing a massively simpliefied version of Jupiter's magnetic dipole 
+Tracing a massively simplified version of Jupiter's magnetic dipole 
 
 Author @twf2360
 """

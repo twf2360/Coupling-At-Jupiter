@@ -165,7 +165,7 @@ class field_models(object):
         coeffs = []
         k = 0
         while k<=n:
-            coeffs.append(scipy.misc.comb(n,k))
+            coeffs.append(scipy.special.comb(n,k)) #chaged by twf2360 due to depreciated scipy.misc.comb
             k += 1
 
         
