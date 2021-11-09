@@ -8,7 +8,8 @@ from mpl_toolkits.mplot3d import Axes3D
 from matplotlib.patches import Circle, PathPatch
 import mpl_toolkits.mplot3d.art3d as art3d
 import matplotlib as mpl
-mpl.rcParams['agg.path.chunksize'] = 10000
+#mpl.rcParams['agg.path.chunksize'] = 10000
+mpl.rcParams['legend.fontsize'] = 10
 
 Rj = 7.14e7
 class individualFieldTrace:
@@ -32,24 +33,18 @@ class individualFieldTrace:
         if coord_type == "sph":
             self.starting_cordinates = starting_cordinates
 
-    def trace_lower_hemisphere(self):
+    def trace_lower_hemisphere(self, print = 'off'):
         coordinates = np.array(self.starting_cordinates)
-        print('starting co-ords (sph) = {}'.format(coordinates))
         points = []
         i = 0
         while True:
             i += 1
-            #print('\n \n this loop has started')
-            
             px, py, pz = self.help.sph_to_cart(coordinates[0],coordinates[1],coordinates[2])
-            #if (i % 1000) == 0:
-                #print(px,py,pz, coordinates)
-            #print('px={}'.format(px))
             points.append([px,py,pz])
             
             r = coordinates[0]
-            if r <= 5 * Rj:
-                print('r too small, r={}, = {}Rj'.format(r, (r/Rj)))
+            if r <= 3 * Rj:
+                #print('r too small, r={}, = {}Rj'.format(r, (r/Rj)))
                 break
 
 
@@ -57,56 +52,56 @@ class individualFieldTrace:
             B_x, B_y, B_z = self.help.Bsph_to_Bcart(B_r, B_theta, B_phi, coordinates[0], coordinates[1],coordinates[2])
             B = np.array([B_x, B_y, B_z])
             coordinates = [px,py,pz]
-            #print('Magnetic field at {} is {}'.format(coordinates, B))
             Bunit = self.help.unit_vector_cart(B)
-            dr = r * 0.001 #(*Rj) #THIS IS HOW WE UPPDATE THE COORDINATES - IF IT TAKES TOO LONG, THIS NEEDS CHANGING IF IT TAKES TOO LONG OR IS GETTING WEIRD CLOSE TO PLANET
-            change = dr * Bunit
+            dr = r * 0.0001 #(*Rj) #THIS IS HOW WE UPPDATE THE COORDINATES - IF IT TAKES TOO LONG, THIS NEEDS CHANGING IF IT TAKES TOO LONG OR IS GETTING WEIRD CLOSE TO PLANET
+            change = dr * - Bunit
             coordinates = np.add(coordinates, change)
-            #if (i % 1000) == 0:
-                #print('cartesian co-ordinates in rj= {}'.format(coordinates/Rj))
             pr, ptheta, pphi = self.help.cart_to_sph(coordinates[0], coordinates[1], coordinates[2])
             coordinates = [pr,ptheta,pphi]
-            if (i % 1000) == 0 or i == 1:
-                print('B cartesian = {}, B sph = [{} {} {}]'.format(B, B_r, B_theta, B_phi))
-                print('r = {}, theta = {}, phi = {}'.format(coordinates[0],coordinates[1],coordinates[2]))
-                print(' x= {}, y = {}, z =  {}'.format(px,py,pz))
-                print('bunit = {}, change = {}, dr = {} \n \n'.format(Bunit, change, dr))
-            #print(' new co-ordinates are = {}, unit vector was = {}, dr was = {}, change = {}'.format(coordinates,Bunit, dr, change))
+            if print == 'on':
+                if (i % 1000) == 0 or i == 1:
+                    print('B cartesian = {}, B sph = [{} {} {}]'.format(B, B_r, B_theta, B_phi))
+                    print('r = {}, theta = {}, phi = {}'.format(coordinates[0],coordinates[1],coordinates[2]))
+                    print(' x= {}, y = {}, z =  {}'.format(px,py,pz))
+                    print('bunit = {}, change = {}, dr = {} \n \n'.format(Bunit, change, dr))
+
         
         return points
         
 
-    def trace_upper_hemisphere(self):
+    def trace_upper_hemisphere(self, print='off'):
         coordinates = np.array(self.starting_cordinates)
         points = []
         i = 0
         while True:
-            i += 1
-            #print('\n \n this loop has started')
-            r = coordinates[0]
-            #print('phi = {}'.format(coordinates[2]))
+            i += 1           
             px, py, pz = self.help.sph_to_cart(coordinates[0],coordinates[1],coordinates[2])
-            #print('px={}'.format(px))
+
             points.append([px,py,pz])
-        
-            if r <= 5 * Rj:
-                print('r too small, r={}'.format(r))
+            
+            r = coordinates[0]
+            if r <= 3 * Rj:
+                #print('r too small, r={}, = {}Rj'.format(r, (r/Rj)))
                 break
+
+
             B_r, B_theta, B_phi = self.field.field_at_point(coordinates)
             B_x, B_y, B_z = self.help.Bsph_to_Bcart(B_r, B_theta, B_phi, coordinates[0], coordinates[1],coordinates[2])
             B = np.array([B_x, B_y, B_z])
-            #print('Magnetic field at {} is {}'.format(coordinates, B))
+            coordinates = [px,py,pz]
             Bunit = self.help.unit_vector_cart(B)
-            dr = r * 0.001 #(*Rj) #THIS IS HOW WE UPPDATE THE COORDINATES - IF IT TAKES TOO LONG, THIS NEEDS CHANGING IF IT TAKES TOO LONG OR IS GETTING WEIRD CLOSE TO PLANET
-            change = dr * -Bunit
+            dr = r * 0.0001 #(*Rj) #THIS IS HOW WE UPPDATE THE COORDINATES - IF IT TAKES TOO LONG, THIS NEEDS CHANGING IF IT TAKES TOO LONG OR IS GETTING WEIRD CLOSE TO PLANET
+            change = dr * Bunit
             coordinates = np.add(coordinates, change)
             pr, ptheta, pphi = self.help.cart_to_sph(coordinates[0], coordinates[1], coordinates[2])
             coordinates = [pr,ptheta,pphi]
-            #print(' new co-ordinates are = {}, unit vector was = {}, dr was = {}, change = {}'.format(coordinates,Bunit, dr, change))
-            #if (i % 10000) == 0:
-               # print('B cartesian = {}, B sph = [{} {} {}]'.format(B, B_r, B_theta, B_phi))
-               # print('r = {}, theta = {}, phi = {}'.format(coordinates[0],coordinates[1],coordinates[2]))
-               # print('bunit = {}, change = {}, dr = {} \n \n'.format(Bunit, change, dr))
+            if print == 'on':
+                if (i % 1000) == 0 or i == 1:
+                    print('B cartesian = {}, B sph = [{} {} {}]'.format(B, B_r, B_theta, B_phi))
+                    print('r = {}, theta = {}, phi = {}'.format(coordinates[0],coordinates[1],coordinates[2]))
+                    print(' x= {}, y = {}, z =  {}'.format(px,py,pz))
+                    print('bunit = {}, change = {}, dr = {} \n \n'.format(Bunit, change, dr))
+
         return points
 
     def plotTrace(self):
@@ -117,11 +112,21 @@ class individualFieldTrace:
         fig = plt.figure()
         ax = fig.gca(projection='3d')
         plottable_lists = np.transpose(total)
-        #print(lower, '\n', upper)
-        #print(total)
-        #print(plottable_lists)
-        #print(plottable_lists)
-        ax.plot(plottable_lists[0], plottable_lists[1], plottable_lists[2])
+
+        ax.plot(plottable_lists[0], plottable_lists[1], plottable_lists[2], label = 'Field Trace')
+        #make the sphere
+        u = np.linspace(0, 2 * np.pi, 100)
+        v = np.linspace(0, np.pi, 100)
+        x = Rj * np.outer(np.cos(u), np.sin(v))
+        y = Rj * np.outer(np.sin(u), np.sin(v))
+        z = Rj * np.outer(np.ones(np.size(u)), np.cos(v))
+        ax.plot_surface(x, y, z, color = 'yellow', zorder=100, label = 'Jupiter')
+        ax.set_xlim3d(-40*Rj, 40*Rj)
+        ax.set_ylim3d(-40*Rj, 40*Rj)
+        ax.set_zlim3d(-40*Rj, 40*Rj)
+        ax.set_xlabel('$X$', fontsize=10)
+        ax.set_ylabel('$Y$', fontsize=10)
+        #ax.legend()
         plt.savefig('images/individual_mag_field_trace.png')
         plt.show()
 

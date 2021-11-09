@@ -126,10 +126,10 @@ class radialOutflow:
         returns alfven velocity at point r 
         '''
         Br, Btheta, Bphi = self.field.field_at_point([r,theta,phi])
-        B = help.Bsph_to_Bcart(Br, Btheta, Bphi, r, theta, phi)
+        #B = help.Bsph_to_Bcart(Br, Btheta, Bphi, r, theta, phi)
         n = self.radial_density(r)
         rho = self.avgIonMass * n
-        magB = np.linalg.norm(B)
+        magB = abs(Br)
         Va = magB/(mu_0 * rho)
         print("magB = {}, n = {}, rho = {}, mu = {}, mass = {} va = {}".format(magB, n, rho, mu_0, self.avgIonMass, Va))
         return Va
