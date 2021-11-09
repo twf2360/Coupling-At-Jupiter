@@ -44,7 +44,6 @@ class individualFieldTrace:
             
             r = coordinates[0]
             if r <= 3 * Rj:
-                #print('r too small, r={}, = {}Rj'.format(r, (r/Rj)))
                 break
 
 
@@ -81,7 +80,6 @@ class individualFieldTrace:
             
             r = coordinates[0]
             if r <= 3 * Rj:
-                #print('r too small, r={}, = {}Rj'.format(r, (r/Rj)))
                 break
 
 

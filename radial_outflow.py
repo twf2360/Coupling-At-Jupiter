@@ -35,57 +35,9 @@ class radialOutflow:
     '''
     def __init__(self,avgIonMass):
         
-        field = radialOutflow.magneticDipole(B0)
-        self.field = field 
+    
         self.avgIonMass = avgIonMass * 1.67e-27
 
-    class magneticDipole:
-        ''' 
-        define the magnetic dipole 
-        '''
-        def __init__(self, strength):
-            self.strength = strength
-        
-        def cart_to_sph(self, x, y ,z):
-            '''
-            turn the cartesian co-ordinates of a point into spherical 
-            '''
-
-            r = math.sqrt(x**2 + y**2 + z**2)
-            theta = math.atan2(math.sqrt(x**2 + y**2), z)
-            phi = math.atan2(x,y)
-            return r, theta, phi
-
-        def sph_to_cart(self, r, theta, phi):
-            x = r*np.sin(theta)*np.cos(phi)
-            y = r*np.sin(theta)*np.sin(phi)
-            z = r*np.cos(theta)
-            return x,y,z
-        
-        def field_at_point(self, cordinates = np.array([0,0,0], dtype = float), coord_type = 'sph'):
-            if coord_type == 'cart':
-                x = cordinates[0]
-                y = cordinates[1]
-                z = cordinates[2]
-                r, theta, phi = self.cart_to_sph(x, y, z)
-            elif coord_type == 'sph':
-                r = cordinates[0]
-                theta = float(cordinates[1])
-                phi = cordinates[2]
-            else:
-                print('co-ordinate type not recognised.')
-                sys.exit()
-            
-            #Overall strength of the vector will scale with distance 
-            ScaleFactor = self.strength * (Rj/r)**3
-
-            #magnetic field in radial and polar direction
-            
-            B_r = -2 * ScaleFactor * np.cos(theta)
-            B_theta = - ScaleFactor * np.sin(theta)
-            B_phi = 0
-
-            return B_r, B_theta, B_phi
 
         
         
@@ -117,7 +69,7 @@ class radialOutflow:
         n = 3.2e8 * R**(-6.9) + 9.9*R**(-1.28) * 1e6
         return n
 
-    def local_Alfven_vel(self, r, theta = np.pi/2, phi = '0'):
+    def local_Alfven_vel(self, r, theta = np.pi/2, phi = 0):
         help = HelpfulFunctions()
         ''' 
         inputs:
@@ -125,13 +77,12 @@ class radialOutflow:
 
         returns alfven velocity at point r 
         '''
-        Br, Btheta, Bphi = self.field.field_at_point([r,theta,phi])
-        #B = help.Bsph_to_Bcart(Br, Btheta, Bphi, r, theta, phi)
+        magB = B0 * (Rj/r)**3
         n = self.radial_density(r)
         rho = self.avgIonMass * n
-        magB = abs(Br)
-        Va = magB/(mu_0 * rho)
-        print("magB = {}, n = {}, rho = {}, mu = {}, mass = {} va = {}".format(magB, n, rho, mu_0, self.avgIonMass, Va))
+        denom = np.sqrt((mu_0 * rho))
+        Va = magB/ denom
+        print("magB = {}, denom = {} \n n = {}, rho = {}, mu = {}, mass = {} va = {} \n \n".format(magB, denom, n, rho, mu_0, self.avgIonMass, Va))
         return Va
 
     def datapoints(self, minR_RJ, maxR_RJ, numpoints, mdots):
@@ -186,7 +137,7 @@ class radialOutflow:
             
         #print(va_values)
         va_kms = np.array(va_values)/1000
-        #ax.plot(Rj_values, va_kms, label = 'local alfven velocity')
+        ax.plot(Rj_values, va_kms, label = 'local alfven velocity')
         ax.legend()
         plt.show()
         plt.savefig('images/radial_flow_plot.png')
