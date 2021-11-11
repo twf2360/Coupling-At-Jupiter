@@ -69,6 +69,50 @@ class radialOutflow:
         n = 3.2e8 * R**(-6.9) + 9.9*R**(-1.28) * 1e6
         return n
 
+    def plotRadialDensity(self, numpoints = 1000, start = 3*Rj, end = 70*Rj ):
+        densities = []
+        radii = []
+        for r in np.linspace(start, end, numpoints):
+            densities.append(self.radial_density(r))
+            R = r/Rj
+            radii.append(R)
+        fig, ax = plt.subplots()
+        ax.plot(radii, densities, label = 'density')
+        ax.legend()
+        ax.set(xlabel='Radius (RJ)', ylabel='Density ($m^3$)', title='Density Vs Radial Distsance')
+        ax.yaxis.set_ticks_position('both')
+        plt.savefig('images/radial_density_profile.png')
+        plt.show()
+        
+    def plotRadialDensityTwoSegments(self, numpoints = 1000, start1 = 3*Rj, end1 = 20*Rj, start2 =50*Rj, end2 =70*Rj):
+        densities1 = []
+        radii1 = []
+        densities2 = []
+        radii2 = []
+        for r in np.linspace(start1, end1, numpoints):
+            densities1.append(self.radial_density(r))
+            R = r/Rj
+            radii1.append(R)
+        
+        for r in np.linspace(start2, end2, numpoints):
+            densities2.append(self.radial_density(r))
+            R = r/Rj
+            radii2.append(R)
+        
+        fig, (ax1, ax2) = plt.subplots(2)
+        ax1.plot(radii1, densities1, label = 'density section 1')
+        ax2.plot(radii2, densities2, label = 'density section 2')
+        ax1.legend()
+        ax1.set(xlabel='Radius (RJ)', ylabel='Density ($m^3$)', title='Density Vs Radial Distance')
+        ax1.yaxis.set_ticks_position('both')
+        ax2.legend()
+        ax2.set(xlabel='Radius (RJ)', ylabel='Density ($m^3$)', title='Density Vs Radial Distance')
+        ax2.yaxis.set_ticks_position('both')
+        plt.savefig('images/radial_density_profile_two_points.png')
+        plt.show()
+        
+
+        
     def local_Alfven_vel(self, r, theta = np.pi/2, phi = 0):
         help = HelpfulFunctions()
         ''' 
@@ -146,14 +190,19 @@ class radialOutflow:
         # Put a legend below current axis
         ax.legend(loc='upper center', bbox_to_anchor=(0.5, -0.1),
                 fancybox=True, shadow=True, ncol=5)
+        ax.yaxis.set_ticks_position('both')
         plt.savefig('images/radial_flow_plot.png')
         plt.show()
 
         
 radial = radialOutflow(28)
+'''
 radial.datapoints(1, 100, 200, [280, 500, 1300])
 radial.plot()
- 
+'''
+
+radial.plotRadialDensity()
+radial.plotRadialDensityTwoSegments() #find a way to overlay the plots on top of each other?
 
 
 
