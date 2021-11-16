@@ -38,7 +38,7 @@ class individualFieldTrace:
         i = 0
         while True:
             i += 1
-            px, py, pz = self.help.sph_to_cart(coordinates[0],coordinates[1],coordinates[2], quad = 1)
+            px, py, pz = self.help.sph_to_cart(coordinates[0],coordinates[1],coordinates[2])
             points.append([px,py,pz])
             r = coordinates[0]
             if r <= 3 * Rj:
@@ -55,7 +55,7 @@ class individualFieldTrace:
             dr = r * 0.001 #(*Rj) #THIS IS HOW WE UPPDATE THE COORDINATES - IF IT TAKES TOO LONG, THIS NEEDS CHANGING IF IT TAKES TOO LONG OR IS GETTING WEIRD CLOSE TO PLANET
             change = dr * - Bunit
             coordinates = np.add(coordinates, change)
-            pr, ptheta, pphi = self.help.cart_to_sph(coordinates[0], coordinates[1], coordinates[2], quad = 1)
+            pr, ptheta, pphi = self.help.cart_to_sph(coordinates[0], coordinates[1], coordinates[2])
             coordinates = [pr,ptheta,pphi]
 
             
@@ -78,7 +78,7 @@ class individualFieldTrace:
         i = 0
         while True:
             i += 1           
-            px, py, pz = self.help.sph_to_cart(coordinates[0],coordinates[1],coordinates[2], quad=0)
+            px, py, pz = self.help.sph_to_cart(coordinates[0],coordinates[1],coordinates[2])
 
             points.append([px,py,pz])
             
