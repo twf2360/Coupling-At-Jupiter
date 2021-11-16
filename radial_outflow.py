@@ -9,12 +9,12 @@ import matplotlib.pyplot as plt
 import json
 from helpful_functions import HelpfulFunctions
 #Magnitude of Jupiter's Magnetic Field at equator in T
-B0 = 4.17e-7
+B0 = 4.17 * 10 **-4
 
 #Jupiter Equatorial Radius in M
-Rj = 7.14e7 #from Dessler's appendices 
+Rj = 7.14 * 10 ** 7  #from Dessler's appendices 
 
-mu_0 = 4* 10e-7* math.pi
+mu_0 = 1.25663706212 * 10 ** -6
 
 
 class radialOutflow:
@@ -34,14 +34,9 @@ class radialOutflow:
     
     '''
     def __init__(self,avgIonMass):
-        
-    
-        self.avgIonMass = avgIonMass * 1.67e-27
+        self.avgIonMass = avgIonMass * 1.67 * 10**-27
 
 
-        
-        
-    
     def flow_velocity(self, r, mdot):
         ''' 
         inputs:
@@ -66,10 +61,10 @@ class radialOutflow:
     def radial_density(self, r):
         
         R = r/Rj
-        n = 3.2e8 * R**(-6.9) + 9.9*R**(-1.28) * 1e6
+        n = (3.2e8 * R**(-6.9) + 9.9*R**(-1.28)) * 1e6 #think it should be R
         return n
 
-    def plotRadialDensity(self, numpoints = 1000, start = 3*Rj, end = 70*Rj ):
+    def plotRadialDensity(self, numpoints = 1000, start = 5*Rj, end = 70*Rj):
         densities = []
         radii = []
         for r in np.linspace(start, end, numpoints):
@@ -81,10 +76,11 @@ class radialOutflow:
         ax.legend()
         ax.set(xlabel='Radius (RJ)', ylabel='Density ($m^3$)', title='Density Vs Radial Distsance')
         ax.yaxis.set_ticks_position('both')
+        plt.yscale("log")
         plt.savefig('images/radial_density_profile.png')
         plt.show()
         
-    def plotRadialDensityTwoSegments(self, numpoints = 1000, start1 = 3*Rj, end1 = 20*Rj, start2 =50*Rj, end2 =70*Rj):
+    def plotRadialDensityTwoSegments(self, numpoints = 1000, start1 = 5*Rj, end1 = 20*Rj, start2 =50*Rj, end2 =70*Rj):
         densities1 = []
         radii1 = []
         densities2 = []
@@ -100,13 +96,13 @@ class radialOutflow:
             radii2.append(R)
         
         fig, (ax1, ax2) = plt.subplots(2)
-        ax1.plot(radii1, densities1, label = 'density section 1')
-        ax2.plot(radii2, densities2, label = 'density section 2')
+        ax1.semilogy(radii1, densities1, label = 'density section 1') #change to ax.plot to remove log scale
+        ax2.semilogy(radii2, densities2, label = 'density section 2') #change to ax.plot ^^
         ax1.legend()
-        ax1.set(xlabel='Radius (RJ)', ylabel='Density ($m^3$)', title='Density Vs Radial Distance')
+        ax1.set(xlabel='Radius (RJ)', ylabel='Density ($m^3$)' ,title='Density Vs Radial Distance')
         ax1.yaxis.set_ticks_position('both')
         ax2.legend()
-        ax2.set(xlabel='Radius (RJ)', ylabel='Density ($m^3$)', title='Density Vs Radial Distance')
+        ax2.set(xlabel='Radius (RJ)', ylabel='Density ($m^3$)') #, title='Density Vs Radial Distance')
         ax2.yaxis.set_ticks_position('both')
         plt.savefig('images/radial_density_profile_two_points.png')
         plt.show()
@@ -126,7 +122,7 @@ class radialOutflow:
         rho = self.avgIonMass * n
         denom = np.sqrt((mu_0 * rho))
         Va = magB/ denom
-        print("magB = {}, denom = {} \n n = {}, rho = {}, mu = {}, mass = {} va = {} \n \n".format(magB, denom, n, rho, mu_0, self.avgIonMass, Va))
+        #print("magB = {}, denom = {} \n n = {}, rho = {}, mu = {}, mass = {} va = {} \n \n".format(magB, denom, n, rho, mu_0, self.avgIonMass, Va))
         return Va
 
     def datapoints(self, minR_RJ, maxR_RJ, numpoints, mdots):
@@ -159,7 +155,7 @@ class radialOutflow:
         np.save("data/radial_flow/r_values.npy", r_values, allow_pickle=True)
     
 
-    def plot(self):
+    def plotOutflow(self):
         '''
         requires there to be data already - plots outflow velocity against radial distance
         '''
@@ -172,6 +168,7 @@ class radialOutflow:
         
         fig, ax = plt.subplots()
         ax.set(xlabel = 'Radial Distance (RJ)', ylabel = 'v(kms)')
+
        # print(type(v_values))
         #print(v_values)
         
@@ -184,23 +181,23 @@ class radialOutflow:
         ax.plot(Rj_values, va_kms, label = 'local alfven velocity')
         ax.legend()
         box = ax.get_position()
-        ax.set_position([box.x0, box.y0 + box.height * 0.1,
-                        box.width, box.height * 0.9])
+        #ax.set_position([box.x0, box.y0 + box.height * 0.1,
+        #                box.width, box.height * 0.9])
 
         # Put a legend below current axis
-        ax.legend(loc='upper center', bbox_to_anchor=(0.5, -0.1),
-                fancybox=True, shadow=True, ncol=5)
+        #ax.legend(loc='upper center', bbox_to_anchor=(0.5, -0.1),
+                #fancybox=True, shadow=True, ncol=5)
+        ax.legend()
         ax.yaxis.set_ticks_position('both')
+        plt.yscale("log")
         plt.savefig('images/radial_flow_plot.png')
         plt.show()
 
         
 radial = radialOutflow(28)
-'''
-radial.datapoints(1, 100, 200, [280, 500, 1300])
-radial.plot()
-'''
 
+radial.datapoints(10, 100, 200, [280, 500, 1300])
+radial.plotOutflow()
 radial.plotRadialDensity()
 radial.plotRadialDensityTwoSegments() #find a way to overlay the plots on top of each other?
 

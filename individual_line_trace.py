@@ -16,7 +16,6 @@ class individualFieldTrace:
     ''' 
 
     TO DO - CHECK IF IT WORKS, PLOT THE TRACE, EXTEND TO MORE COMPLICATED MODELS? COULD DO THE 463 MODEL WHICH WILL INCLUDE A BPHI COMPONENT DUE TO SPINNING PLANET 
-          - MENTION IN THE TEAMS CHANNEL ABOUT THE DEPRECIATED MODULE.   
 
     '''
 
@@ -33,48 +32,53 @@ class individualFieldTrace:
         if coord_type == "sph":
             self.starting_cordinates = starting_cordinates
 
-    def trace_lower_hemisphere(self, print = 'off'):
+    def trace_lower_hemisphere(self, printing = 'off'):
         coordinates = np.array(self.starting_cordinates)
         points = []
         i = 0
         while True:
             i += 1
-            px, py, pz = self.help.sph_to_cart(coordinates[0],coordinates[1],coordinates[2])
+            px, py, pz = self.help.sph_to_cart(coordinates[0],coordinates[1],coordinates[2], quad = 1)
             points.append([px,py,pz])
-            
             r = coordinates[0]
             if r <= 3 * Rj:
                 break
 
 
-            B_r, B_theta, B_phi = self.field.field_at_point(coordinates)
-            B_x, B_y, B_z = self.help.Bsph_to_Bcart(B_r, B_theta, B_phi, coordinates[0], coordinates[1],coordinates[2])
+            B_r, B_theta, B_phi = self.field.field_at_point(cordinates = coordinates)
+            B_x, B_y, B_z = self.help.Bsph_to_Bcart(B_r, B_theta, B_phi, coordinates[0], coordinates[1],coordinates[2])#, quad =1)
+            if not coordinates[2]  == 0:
+                print('PHI NOT EQUAL 0')
             B = np.array([B_x, B_y, B_z])
             coordinates = [px,py,pz]
             Bunit = self.help.unit_vector_cart(B)
-            dr = r * 0.0001 #(*Rj) #THIS IS HOW WE UPPDATE THE COORDINATES - IF IT TAKES TOO LONG, THIS NEEDS CHANGING IF IT TAKES TOO LONG OR IS GETTING WEIRD CLOSE TO PLANET
+            dr = r * 0.001 #(*Rj) #THIS IS HOW WE UPPDATE THE COORDINATES - IF IT TAKES TOO LONG, THIS NEEDS CHANGING IF IT TAKES TOO LONG OR IS GETTING WEIRD CLOSE TO PLANET
             change = dr * - Bunit
             coordinates = np.add(coordinates, change)
-            pr, ptheta, pphi = self.help.cart_to_sph(coordinates[0], coordinates[1], coordinates[2])
+            pr, ptheta, pphi = self.help.cart_to_sph(coordinates[0], coordinates[1], coordinates[2], quad = 1)
             coordinates = [pr,ptheta,pphi]
-            if print == 'on':
+
+            
+            if printing == 'on':
                 if (i % 1000) == 0 or i == 1:
                     print('B cartesian = {}, B sph = [{} {} {}]'.format(B, B_r, B_theta, B_phi))
                     print('r = {}, theta = {}, phi = {}'.format(coordinates[0],coordinates[1],coordinates[2]))
                     print(' x= {}, y = {}, z =  {}'.format(px,py,pz))
                     print('bunit = {}, change = {}, dr = {} \n \n'.format(Bunit, change, dr))
+            
+            if i % 1000 == 0:
+               print("theta = {}".format(coordinates[1]))
 
-        
         return points
         
 
-    def trace_upper_hemisphere(self, print='off'):
+    def trace_upper_hemisphere(self, printing='off'):
         coordinates = np.array(self.starting_cordinates)
         points = []
         i = 0
         while True:
             i += 1           
-            px, py, pz = self.help.sph_to_cart(coordinates[0],coordinates[1],coordinates[2])
+            px, py, pz = self.help.sph_to_cart(coordinates[0],coordinates[1],coordinates[2], quad=0)
 
             points.append([px,py,pz])
             
@@ -93,7 +97,7 @@ class individualFieldTrace:
             coordinates = np.add(coordinates, change)
             pr, ptheta, pphi = self.help.cart_to_sph(coordinates[0], coordinates[1], coordinates[2])
             coordinates = [pr,ptheta,pphi]
-            if print == 'on':
+            if printing == 'on':
                 if (i % 1000) == 0 or i == 1:
                     print('B cartesian = {}, B sph = [{} {} {}]'.format(B, B_r, B_theta, B_phi))
                     print('r = {}, theta = {}, phi = {}'.format(coordinates[0],coordinates[1],coordinates[2]))
@@ -105,13 +109,15 @@ class individualFieldTrace:
     def plotTrace(self):
         lower = np.array(self.trace_lower_hemisphere())
         upper = np.array(self.trace_upper_hemisphere())
-        total = np.append(upper, lower, axis=0)
+
         
         fig = plt.figure()
         ax = fig.gca(projection='3d')
-        plottable_lists = np.transpose(total)
+        plottable_lists_upper = np.transpose(upper)
+        plottable_lists_lower = np.transpose(lower)
 
-        ax.plot(plottable_lists[0], plottable_lists[1], plottable_lists[2], label = 'Field Trace')
+        ax.plot(plottable_lists_upper[0], plottable_lists_upper[1], plottable_lists_upper[2], label = 'Field Trace')
+        ax.plot(plottable_lists_lower[0], plottable_lists_lower[1], plottable_lists_lower[2], label = 'Field Trace')
         #make the sphere
         u = np.linspace(0, 2 * np.pi, 100)
         v = np.linspace(0, np.pi, 100)
@@ -156,11 +162,11 @@ class individualFieldTrace:
 
             #magnetic field in radial and polar direction
             
-            B_r = -2 * ScaleFactor * np.cos(theta)
-            B_theta = - ScaleFactor * np.sin(theta)
+            B_r = - 2 * ScaleFactor * np.cos(theta)
+            B_theta =  - ScaleFactor * np.sin(theta)
             B_phi = 0
 
-            return B_r, B_theta, B_phi    
+            return B_r, B_theta, B_phi   
 
 test = individualFieldTrace([30*Rj, np.pi/2, 0])
 test.plotTrace()
