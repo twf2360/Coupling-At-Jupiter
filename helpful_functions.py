@@ -18,30 +18,20 @@ class HelpfulFunctions():
                             np.linspace(points_min, points_max, NumPoints))
         return x,y,z
 
-    def sph_to_cart(self, r, theta, phi, quad = 0):
-        if quad == 0:
-            x = r*np.sin(theta)*np.cos(phi)
-            y = r*np.sin(theta)*np.sin(phi)
-            z = r*np.cos(theta)
-            return x,y,z
-        if quad == 1:
-            x = r*np.cos(theta - np.pi/2)*np.cos(phi)
-            y = r*np.cos(theta - np.pi/2)*np.sin(phi)
-            z = -r*np.sin(theta - np.pi/2)
-            return x,y,z
+    def sph_to_cart(self, r, theta, phi):
+
+        x = r*np.sin(theta)*np.cos(phi)
+        y = r*np.sin(theta)*np.sin(phi)
+        z = r*np.cos(theta)
+        return x,y,z
 
 
-    def cart_to_sph(self,x ,y,z, quad = 0):
-        if quad == 0:
-            r = np.sqrt(x**2+y**2+z**2)
-            theta = np.arctan2(np.sqrt(x**2+y**2),z)
-            phi = np.arctan2(y,x)
-            return r, theta, phi
-        if quad == 1:
-            r = np.sqrt(x**2+y**2+z**2)
-            theta = np.arctan2(np.sqrt(x**2+y**2),z)
-            phi = np.arctan2(y,x)
-            return r, theta, phi
+
+    def cart_to_sph(self,x ,y,z):
+        r = np.sqrt(x**2+y**2+z**2)
+        theta = np.arctan2(np.sqrt(x**2+y**2),z)
+        phi = np.arctan2(y,x)
+        return r, theta, phi
 
     def Bsph_to_Bcart(self, Br, Btheta, Bphi, r, theta,phi, quad =0):
         theta = float(theta)
