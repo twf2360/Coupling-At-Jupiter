@@ -33,19 +33,14 @@ class HelpfulFunctions():
         phi = np.arctan2(y,x)
         return r, theta, phi
 
-    def Bsph_to_Bcart(self, Br, Btheta, Bphi, r, theta,phi, quad =0):
+    def Bsph_to_Bcart(self, Br, Btheta, Bphi, r, theta,phi):
         theta = float(theta)
         phi = float(phi)
-        if quad == 0:
-            Bx = Br * np.sin(theta) * np.cos(phi) + Btheta * np.sin(theta) * np.cos(phi) - Bphi *np.sin(phi)
-            By = Br * np.sin(theta) * np.sin(phi) + Btheta * np.cos(theta) * np.sin(phi) + Bphi *np.cos(phi)
-            Bz = Br * np.cos(theta)  - Btheta * np.sin(theta)
-            return Bx, By, Bz
-        if quad == 1:
-            Bx = Br * np.sin(theta - np.pi/2) * np.cos(phi) + Btheta * np.sin(theta - np.pi/2) * np.cos(phi) - Bphi *np.sin(phi)
-            By = Br * np.sin(theta - np.pi/2) * np.sin(phi) + Btheta * np.cos(theta- np.pi/2) * np.sin(phi) + Bphi *np.cos(phi)
-            Bz = - Br * np.cos(theta - np.pi/2)  - Btheta * np.sin(theta - np.pi/2)
-            return Bx, By, Bz
+        Bx = Br * np.sin(theta) * np.cos(phi) + Btheta * np.cos(theta) * np.cos(phi) - Bphi *np.sin(phi)
+        By = Br * np.sin(theta) * np.sin(phi) + Btheta * np.cos(theta) * np.sin(phi) + Bphi *np.cos(phi)
+        Bz = Br * np.cos(theta)  - Btheta * np.sin(theta)
+        return Bx, By, Bz
+
 
 
     def unit_vector_cart(self, vector):
