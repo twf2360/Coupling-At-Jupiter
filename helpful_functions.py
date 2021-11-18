@@ -49,7 +49,7 @@ class HelpfulFunctions():
 
 
     def unit_vector_cart(self, vector):
-        norm = np.linalg.norm(vector)
+        norm = np.sqrt(vector[0]**2 + vector[1]**2 + vector[2]**2)
         return vector/norm
 '''
 hpf = HelpfulFunctions()

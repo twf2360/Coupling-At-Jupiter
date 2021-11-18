@@ -77,17 +77,14 @@ def test_unit_vector():
     test4 = hpf.unit_vector_cart(test4_vec)
     test5 = hpf.unit_vector_cart(test5_vec)
     test6 = hpf.unit_vector_cart(test6_vec)
+    
     assert (test1 == [1/np.sqrt(3),1/np.sqrt(3),1/np.sqrt(3)]).all()
     assert (test2 == [2/np.sqrt(29),3/np.sqrt(29),1/np.sqrt(29)]).all()
-    assert (test6 == [-1,0,0]).all()
     assert (test3 == [-2/np.sqrt(329),6/np.sqrt(329),17/np.sqrt(329)]).all()
     assert (test4 == [-6/np.sqrt(51),-5/np.sqrt(51),0]).all()
     assert (test5 == [-18/np.sqrt(805),9/np.sqrt(805),20/np.sqrt(805)]).all()
+    assert (test6 == [-1,0,0]).all()
 
-
-
-
-    
 
 '''
 def test_b_conversion():
