@@ -132,20 +132,26 @@ class DifferentFieldsTrace:
         plottable_lists_upper = np.transpose(upper)
         plottable_lists_lower = np.transpose(lower)
 
-        ax.plot(plottable_lists_upper[0], plottable_lists_upper[1], plottable_lists_upper[2],color = 'black', label = 'Field Trace')
-        ax.plot(plottable_lists_lower[0], plottable_lists_lower[1], plottable_lists_lower[2], color = 'black', label = 'Field Trace')
+        #turning the axis into Rj
+        plottable_lists_lower_rj = plottable_lists_lower/Rj
+        plottable_lists_upper_rj = plottable_lists_upper/Rj
+
+
+
+        ax.plot(plottable_lists_upper_rj[0], plottable_lists_upper_rj[1], plottable_lists_upper_rj[2],color = 'black', label = 'Field Trace')
+        ax.plot(plottable_lists_lower_rj[0], plottable_lists_lower_rj[1], plottable_lists_lower_rj[2], color = 'black', label = 'Field Trace')
         #make the sphere
         u = np.linspace(0, 2 * np.pi, 100)
         v = np.linspace(0, np.pi, 100)
-        x = Rj * np.outer(np.cos(u), np.sin(v))
-        y = Rj * np.outer(np.sin(u), np.sin(v))
-        z = Rj * np.outer(np.ones(np.size(u)), np.cos(v))
+        x = np.outer(np.cos(u), np.sin(v))
+        y = np.outer(np.sin(u), np.sin(v))
+        z = np.outer(np.ones(np.size(u)), np.cos(v))
         ax.plot_surface(x, y, z, color = 'yellow', zorder=100, label = 'Jupiter')
-        ax.set_xlim3d(-40*Rj, 40*Rj)
-        ax.set_ylim3d(-40*Rj, 40*Rj)
-        ax.set_zlim3d(-40*Rj, 40*Rj)
-        ax.set_xlabel('$X$', fontsize=10)
-        ax.set_ylabel('$Y$', fontsize=10)
+        ax.set_xlim3d(-40, 40)
+        ax.set_ylim3d(-40, 40)
+        ax.set_zlim3d(-40, 40)
+        ax.set_xlabel('$X, R_j$', fontsize=10)
+        ax.set_ylabel('$Y, R_J$', fontsize=10)
         plt.title('Magnetic Field Trace using {} model'.format(self.model))
         #plt.legend()
         plt.savefig('images/mag_field_trace_{}.png'.format(self.model))
@@ -165,6 +171,10 @@ class DifferentFieldsTrace:
         plottable_lists_upper = np.transpose(upper)
         plottable_lists_lower = np.transpose(lower)
 
+        #turning the axis into Rj
+        plottable_lists_lower_rj = plottable_lists_lower/Rj
+        plottable_lists_upper_rj = plottable_lists_upper/Rj
+
         ax.plot(plottable_lists_upper[0], plottable_lists_upper[2],color = 'black', label = 'Field Trace')
         ax.plot(plottable_lists_lower[0], plottable_lists_lower[2], color = 'black')
         #make the circle
@@ -176,5 +186,5 @@ class DifferentFieldsTrace:
  
 
 
-test = DifferentFieldsTrace([30*Rj, np.pi/2, 0])
+test = DifferentFieldsTrace([30*Rj, np.pi/2, np.pi/2], model = 'VIT4')
 test.plotTrace()
