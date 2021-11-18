@@ -135,6 +135,29 @@ class individualFieldTrace:
         plt.savefig('images/individual_mag_field_trace.png')
         plt.show()
 
+    def plot2d_dipole(self):
+        '''
+        will only see sensible results if y = 0 throughout and for dipole field 
+        plots the x-z plane 
+        '''
+
+        lower = np.array(self.trace_lower_hemisphere())
+        upper = np.array(self.trace_upper_hemisphere())
+
+        
+        fig, ax = plt.subplots()
+        plottable_lists_upper = np.transpose(upper)
+        plottable_lists_lower = np.transpose(lower)
+
+        ax.plot(plottable_lists_upper[0], plottable_lists_upper[2],color = 'black', label = 'Field Trace')
+        ax.plot(plottable_lists_lower[0], plottable_lists_lower[2], color = 'black')
+        #make the circle
+        ax.add_patch(Circle((0,0), Rj, color='y', zorder=100, label = "Jupiter"))
+        ax.legend()
+        plt.savefig('images/individual_mag_field_trace_2d.png')
+        plt.show()
+
+
 
     class magneticDipole:
         ''' 
@@ -167,7 +190,8 @@ class individualFieldTrace:
             B_theta = ScaleFactor * np.sin(theta)
             B_phi = 0
 
-            return B_r, B_theta, B_phi   
+            return B_r, B_theta, B_phi  
+
 
 test = individualFieldTrace([30*Rj, np.pi/2, 0])
-test.plotTrace()
+test.plot2d_dipole()
