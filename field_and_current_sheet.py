@@ -22,7 +22,8 @@ Rj = 7.14e7
 class DifferentFieldsTrace:
     ''' 
 
-    
+    TO DO - CHECK IF IT WORKS, PLOT THE TRACE, EXTEND TO MORE COMPLICATED MODELS? COULD DO THE 463 MODEL WHICH WILL INCLUDE A BPHI COMPONENT DUE TO SPINNING PLANET 
+
     '''
 
     def __init__(self, starting_cordinates, coord_type = "sph", equatorial_strength = 4.17e-7, model = 'VIP4'):
@@ -45,6 +46,7 @@ class DifferentFieldsTrace:
             self.starting_cordinates = starting_cordinates
 
     def trace_lower_hemisphere(self, printing = 'off', starting_cordinates = None):
+        print('\n Lower Hemisphere')
         if starting_cordinates == None:
             starting_cordinates = self.starting_cordinates
         coordinates = starting_cordinates
@@ -60,6 +62,10 @@ class DifferentFieldsTrace:
 
 
             B_r, B_theta, B_phi = self.field.Internal_Field(r, coordinates[1], coordinates[2], model=self.model)
+            B_current = self.field.CAN_sheet(r, coordinates[1], coordinates[2])
+            B_notcurrent = np.array([B_r, B_theta, B_phi])
+            B_overall = np.add(B_current, B_notcurrent)
+            B_x, B_y, B_z = self.help.Bsph_to_Bcart(B_overall[0], B_overall[1], B_overall[2], coordinates[0], coordinates[1],coordinates[2])    
             B_x, B_y, B_z = self.help.Bsph_to_Bcart(B_r, B_theta, B_phi, coordinates[0], coordinates[1],coordinates[2])# quad =1)
             '''
             if not coordinates[2]  == 0:
@@ -89,7 +95,8 @@ class DifferentFieldsTrace:
         return points
         
 
-    def trace_upper_hemisphere(self, printing='off', starting_cordinates = None):
+    def trace_upper_hemisphere(self, printing='off', starting_cordinates = None):##
+        print(' \n Upper Hemisphere:')
         if starting_cordinates == None:
             starting_cordinates = self.starting_cordinates
         coordinates = starting_cordinates
@@ -107,7 +114,13 @@ class DifferentFieldsTrace:
 
 
             B_r, B_theta, B_phi = self.field.Internal_Field(r, coordinates[1], coordinates[2], model=self.model)
-            B_x, B_y, B_z = self.help.Bsph_to_Bcart(B_r, B_theta, B_phi, coordinates[0], coordinates[1],coordinates[2])
+            B_current = self.field.CAN_sheet(r, coordinates[1], coordinates[2])
+            B_current_rh_R, B_current_rh_theta, B_current_rh_phi = self.help.B_S3LH_to_S3RH(B_current[0], B_current[1], B_current[2], hemipshere = 'upper')
+            B_current_RH = [B_current_rh_R, B_current_rh_theta, B_current_rh_phi]
+            
+            B_notcurrent = np.array([B_r, B_theta, B_phi])
+            B_overall = np.add(B_current_RH, B_notcurrent)
+            B_x, B_y, B_z = self.help.Bsph_to_Bcart(B_overall[0], B_overall[1], B_overall[2], coordinates[0], coordinates[1],coordinates[2])
             B = np.array([B_x, B_y, B_z])
             coordinates = [px,py,pz]
             Bunit = self.help.unit_vector_cart(B)
@@ -122,6 +135,8 @@ class DifferentFieldsTrace:
                     print('r = {}, theta = {}, phi = {}'.format(coordinates[0],coordinates[1],coordinates[2]))
                     print(' x= {}, y = {}, z =  {}'.format(px,py,pz))
                     print('bunit = {}, change = {}, dr = {} \n \n'.format(Bunit, change, dr))
+            if i % 1000 == 0:
+               print("theta = {}, r = {}Rj".format(coordinates[1], coordinates[0]/Rj))
 
         return points
 
@@ -156,9 +171,9 @@ class DifferentFieldsTrace:
         ax.set_zlim3d(-40, 40)
         ax.set_xlabel('$X, R_j$', fontsize=10)
         ax.set_ylabel('$Y, R_J$', fontsize=10)
-        plt.title('Magnetic Field Trace using {} model'.format(self.model))
+        plt.title('Magnetic Field Trace using {} model, including current sheet'.format(self.model))
         #plt.legend()
-        plt.savefig('images/mag_field_trace_{}.png'.format(self.model))
+        plt.savefig('images/mag_field_trace_{}_current.png'.format(self.model))
         plt.show()
 
 
@@ -204,9 +219,9 @@ class DifferentFieldsTrace:
         ax.set_zlim3d(-40, 40)
         ax.set_xlabel('$X, R_j$', fontsize=10)
         ax.set_ylabel('$Y, R_J$', fontsize=10)
-        plt.title('Magnetic Field Trace using {} model'.format(self.model))
+        plt.title('Magnetic Field Trace using {} model, including current sheet'.format(self.model))
         #plt.legend()
-        plt.savefig('images/mag_field_multi_trace_{}.png'.format(self.model))
+        plt.savefig('images/mag_field_multi_trace_{}_inc_current.png'.format(self.model))
         plt.show()
     def plot2d(self):
         '''
@@ -231,11 +246,12 @@ class DifferentFieldsTrace:
         #make the circle
         ax.add_patch(Circle((0,0), Rj, color='y', zorder=100, label = "Jupiter"))
         ax.legend()
-        plt.savefig('images/individual_mag_field_trace_2d.png')
+        plt.savefig('images/individual_mag_field_trace_2d_inc_current_sheet.png')
         plt.show()
 
  
 
 
 test = DifferentFieldsTrace([30*Rj, np.pi/2, np.pi/2], model = 'VIT4')
-test.plotMultipleLines(r = 20*Rj, num = 8)
+test.plotTrace()
+

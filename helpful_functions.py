@@ -5,12 +5,13 @@ This will hopefully be added to as we go!
 '''
 import numpy as np 
 import math
+import sys
 class HelpfulFunctions():
 
     def __init__(self):
         pass 
 
-    def makegrid(self,NumPoints, gridsize):
+    def makegrid_3d(self,NumPoints, gridsize):
         points_min = -gridsize/2
         points_max = gridsize/2
         x,y,z = np.meshgrid(np.linspace(points_min, points_max, NumPoints),
@@ -46,6 +47,40 @@ class HelpfulFunctions():
     def unit_vector_cart(self, vector):
         norm = np.sqrt(vector[0]**2 + vector[1]**2 + vector[2]**2)
         return vector/norm
+
+
+    def S3LH_to_S3RH(self, r, theta, phi):
+        ''' 
+        takes a co-ordinate point is left handed system three and turns it into right handed system three. 
+
+        ... pain
+        ''' 
+        RHr = r 
+        if 0<= theta < pi/2: 
+            RHtheta = pi/2 - theta
+        elif -pi/2 <= theta < 0:
+            RHtheta = pi/2 + abs(theta)
+        else:
+            print('theta not recognised for S3LH to S3RH; \n theta = {}'.format(theta))
+            sys.exit()
+
+        RHPhi = 2*np.pi - phi
+        return RHr, RHtheta, RHPhi
+
+    def B_S3LH_to_S3RH(self, Br,Btheta, Bphi, hemipshere = 'lower'):
+        Br_RH = Br
+        Bphi_RH = -Bphi
+        if hemipshere == 'upper':
+            Btheta_RH = -Btheta
+        if hemipshere == 'lower':
+            Btheta_RH = Btheta
+
+        return Br_RH, Btheta_RH, Bphi_RH
+
+        
+        
+
+
 '''
 hpf = HelpfulFunctions()
 test2_point = [0,1,0]
