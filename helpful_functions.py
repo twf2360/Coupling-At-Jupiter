@@ -56,10 +56,10 @@ class HelpfulFunctions():
         ... pain
         ''' 
         RHr = r 
-        if 0<= theta < pi/2: 
-            RHtheta = pi/2 - theta
-        elif -pi/2 <= theta < 0:
-            RHtheta = pi/2 + abs(theta)
+        if 0<= theta < np.pi/2: 
+            RHtheta = np.pi/2 - theta
+        elif -np.pi/2 <= theta < 0:
+            RHtheta = np.pi/2 + abs(theta)
         else:
             print('theta not recognised for S3LH to S3RH; \n theta = {}'.format(theta))
             sys.exit()
@@ -67,14 +67,31 @@ class HelpfulFunctions():
         RHPhi = 2*np.pi - phi
         return RHr, RHtheta, RHPhi
 
-    def B_S3LH_to_S3RH(self, Br,Btheta, Bphi, hemipshere = 'lower'):
+    def S3RH_to_S3LH(self, r, theta, phi):
+        rLH = r
+        phiLH = 2*np.pi - phi
+        if 0 < theta <= np.pi/2:
+            thetaLH = np.pi/2 - theta
+        elif np.pi/2 < theta <= np.pi:
+            thetaLH = -(theta - np.pi/2)
+        else:
+            print('theta not recognised: \n theta = {}'.format(theta))
+            sys.exit()
+        return rLH, thetaLH, phiLH
+
+    
+
+    def B_S3LH_to_S3RH(self, Br,Btheta, Bphi):# , hemipshere = 'lower'):
         Br_RH = Br
         Bphi_RH = -Bphi
+        Btheta_RH = - Btheta
+
+        '''
         if hemipshere == 'upper':
             Btheta_RH = -Btheta
         if hemipshere == 'lower':
             Btheta_RH = Btheta
-
+        '''
         return Br_RH, Btheta_RH, Bphi_RH
 
         

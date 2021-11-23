@@ -99,7 +99,7 @@ class radialOutflow:
         ax1.semilogy(radii1, densities1, label = 'density section 1') #change to ax.plot to remove log scale
         ax2.semilogy(radii2, densities2, label = 'density section 2') #change to ax.plot ^^
         ax1.legend()
-        ax1.set(xlabel='Radius (RJ)', ylabel='Density ($m^3$)' ,title='Density Vs Radial Distance')
+        ax1.set(ylabel='Density ($m^3$)' ,title='Density Vs Radial Distance')
         ax1.yaxis.set_ticks_position('both')
         ax2.legend()
         ax2.set(xlabel='Radius (RJ)', ylabel='Density ($m^3$)') #, title='Density Vs Radial Distance')
