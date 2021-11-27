@@ -83,8 +83,9 @@ class DifferentFieldsTrace:
                     print(' x= {}, y = {}, z =  {}'.format(px,py,pz))
                     print('bunit = {}, change = {}, dr = {} \n \n'.format(Bunit, change, dr))
             
-            if i % 1000 == 0:
+            if i % 1000 == 0 or i ==1:
                print("theta = {}".format(coordinates[1]))
+               print([B_r, B_theta, B_phi],r/Rj,'\n')
 
         return points
         
@@ -237,5 +238,6 @@ class DifferentFieldsTrace:
  
 
 
-test = DifferentFieldsTrace([30*Rj, np.pi/2, np.pi/2], model = 'VIT4')
-test.plotMultipleLines(r = 20*Rj, num = 8)
+test = DifferentFieldsTrace([30*Rj, np.pi/2, np.pi/2], model = 'VIP4')
+#test.plotMultipleLines(r = 20*Rj, num = 8)
+test.plotTrace()
