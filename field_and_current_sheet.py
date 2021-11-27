@@ -19,67 +19,89 @@ import scipy.special
 mpl.rcParams['legend.fontsize'] = 10
 
 Rj = 7.14e7
-class DifferentFieldsTrace:
+class InternalAndCS:
     ''' 
-
-    TO DO - CHECK IF IT WORKS, PLOT THE TRACE, EXTEND TO MORE COMPLICATED MODELS? COULD DO THE 463 MODEL WHICH WILL INCLUDE A BPHI COMPONENT DUE TO SPINNING PLANET 
-
+    Class to plot the combined magnetic field; both internally generated the 
+    field thanks to the current sheet
+    
     '''
 
-    def __init__(self, starting_cordinates, coord_type = "sph", equatorial_strength = 4.17e-7, model = 'VIP4'):
-        self.help = HelpfulFunctions()
+    def __init__(self, starting_cordinates = [30*Rj, np.pi/2, np.pi/2], coord_type = "sph", equatorial_strength = 4.17e-7, model = 'VIP4'):
+        ''' 
+        Plots the magnetic field of jupiter, both internally generated (as defined by input model) and due to the current sheet
+
+        Inputs:
+        starting_cordinates: the initial position from which the magnetic field should be calculated, with Jupiter being the origin
+        coord_type = Whether the starting co-ordinates are spherical (system III) or cartesian
+        equatorial_strength = the equatorial field strength on the surface of Jupiter in T
+        model = the model for the internally generated field. Must be included within Chris's model
+
+
+
+        '''
+        self.help = HelpfulFunctions() #a list of helpful functions that come up repeatedly
+
         models = ['JRM09', 'VIP4', 'VIT4', 'Ulysses 17ev', 'V1-17ev','O6','O4', 'SHA', 'dipole']
+        
         if model not in models:
             print('model not recognised')
             sys.exit()
+        
         else:
             self.model = model
         self.field = field_models()
 
         if not (coord_type == 'sph' or coord_type == 'cart'):
             print('please input co-ordinates in spherical polar or cartesian ("sph" / "cart") \n I will extend to further co-ordinate types later')
-        if coord_type == 'cart':
+        
+        if coord_type == 'cart': #if the coordinates are entired in cartersian they are changed to be in spherical polar
             x,y,z = starting_cordinates[0], starting_cordinates[1], starting_cordinates[2]
             r,theta,phi = self.help.cart_to_sph(x, y, z)
             self.starting_cordinates = [r,theta,phi]
+        
         if coord_type == "sph":
             self.starting_cordinates = starting_cordinates
 
     def trace_lower_hemisphere(self, printing = 'off', starting_cordinates = None):
+        ''' 
+        Trace the lower hemisphere of the magnetic field, starting from the initially defined co ordinated.
+        If print = on, more sanity checks will be printed! 
+        '''
         print('\n Lower Hemisphere')
         if starting_cordinates == None:
             starting_cordinates = self.starting_cordinates
         coordinates = starting_cordinates
         points = []
         i = 0
+        
         while True:
-            i += 1
+            ''' 
+            loops for as long as r is larger than a defined value
+            '''
+            i += 1 #this i is just used to define when to print things! 
             px, py, pz = self.help.sph_to_cart(coordinates[0],coordinates[1],coordinates[2])
             points.append([px,py,pz])
             r = coordinates[0]
-            if r <= 3 * Rj:
+            
+            if r <= 3 * Rj: #defines when the loop is broken out of 
                 break
 
 
-            B_r, B_theta, B_phi = self.field.Internal_Field(r, coordinates[1], coordinates[2], model=self.model)
-            B_current = self.field.CAN_sheet(r, coordinates[1], coordinates[2])
-            B_notcurrent = np.array([B_r, B_theta, B_phi])
-            B_overall = np.add(B_current, B_notcurrent)
-            B_x, B_y, B_z = self.help.Bsph_to_Bcart(B_overall[0], B_overall[1], B_overall[2], coordinates[0], coordinates[1],coordinates[2])    
-            B_x, B_y, B_z = self.help.Bsph_to_Bcart(B_r, B_theta, B_phi, coordinates[0], coordinates[1],coordinates[2])# quad =1)
-            '''
-            if not coordinates[2]  == 0:
-                print('PHI NOT EQUAL 0')
-                sys.exit()
-            '''
+            B_r, B_theta, B_phi = self.field.Internal_Field(r/Rj, coordinates[1], coordinates[2], model=self.model) #calculates the magnetic field due to the internal field in spherical polar that point
+            if i % 1000 == 0:
+                print(coordinates)
+            B_current = self.field.CAN_sheet(r/Rj, coordinates[1], coordinates[2]) #calculates the magnetic field due to the current sheet in spherical polar
+            B_notcurrent = np.array([B_r, B_theta, B_phi]) 
+            B_overall = np.add(B_current, B_notcurrent) #adds up the total magnetic field 
+            B_x, B_y, B_z = self.help.Bsph_to_Bcart(B_overall[0], B_overall[1], B_overall[2], coordinates[0], coordinates[1],coordinates[2]) #converts magnetic field to cartesian
             B = np.array([B_x, B_y, B_z])
-            coordinates = [px,py,pz]
-            Bunit = self.help.unit_vector_cart(B)
-            dr = r * 0.001 #(*Rj) #THIS IS HOW WE UPPDATE THE COORDINATES - IF IT TAKES TOO LONG, THIS NEEDS CHANGING IF IT TAKES TOO LONG OR IS GETTING WEIRD CLOSE TO PLANET
-            change = dr * Bunit
-            coordinates = np.add(coordinates, change)
-            pr, ptheta, pphi = self.help.cart_to_sph(coordinates[0], coordinates[1], coordinates[2])
-            coordinates = [pr,ptheta,pphi]
+            coordinates = [px,py,pz] #change the definition of the coordinates from spherical to cartesian 
+            Bunit = self.help.unit_vector_cart(B) #calculates the unit vector in cartesian direction
+            dr = r * 0.001  #THIS IS HOW WE UPPDATE THE COORDINATES - IF IT TAKES TOO LONG, THIS NEEDS CHANGING IF IT TAKES TOO LONG OR IS GETTING WEIRD CLOSE TO PLANET
+            change = dr * Bunit #the change from this coordinate to the next one is calculated
+            coordinates = np.add(coordinates, change) #add the change to the current co ordinate
+            pr, ptheta, pphi = self.help.cart_to_sph(coordinates[0], coordinates[1], coordinates[2]) #change the coordinatres back in spherical
+            coordinates = [pr,ptheta,pphi] 
 
             
             if printing == 'on':
@@ -88,9 +110,12 @@ class DifferentFieldsTrace:
                     print('r = {}, theta = {}, phi = {}'.format(coordinates[0],coordinates[1],coordinates[2]))
                     print(' x= {}, y = {}, z =  {}'.format(px,py,pz))
                     print('bunit = {}, change = {}, dr = {} \n \n'.format(Bunit, change, dr))
-            
-            if i % 1000 == 0:
+ 
+            if i % 1000 == 0 or i==1:
                print("theta = {}".format(coordinates[1]))
+               print(B_current, B_notcurrent,r/Rj,'\n')
+               
+               
 
         return points
         
@@ -113,13 +138,10 @@ class DifferentFieldsTrace:
                 break
 
 
-            B_r, B_theta, B_phi = self.field.Internal_Field(r, coordinates[1], coordinates[2], model=self.model)
-            B_current = self.field.CAN_sheet(r, coordinates[1], coordinates[2])
-            B_current_rh_R, B_current_rh_theta, B_current_rh_phi = self.help.B_S3LH_to_S3RH(B_current[0], B_current[1], B_current[2], hemipshere = 'upper')
-            B_current_RH = [B_current_rh_R, B_current_rh_theta, B_current_rh_phi]
-            
+            B_r, B_theta, B_phi = self.field.Internal_Field(r/Rj, coordinates[1], coordinates[2], model=self.model)
+            B_current = self.field.CAN_sheet(r/Rj, coordinates[1], coordinates[2])
             B_notcurrent = np.array([B_r, B_theta, B_phi])
-            B_overall = np.add(B_current_RH, B_notcurrent)
+            B_overall = np.add(B_current, B_notcurrent)
             B_x, B_y, B_z = self.help.Bsph_to_Bcart(B_overall[0], B_overall[1], B_overall[2], coordinates[0], coordinates[1],coordinates[2])
             B = np.array([B_x, B_y, B_z])
             coordinates = [px,py,pz]
@@ -136,7 +158,8 @@ class DifferentFieldsTrace:
                     print(' x= {}, y = {}, z =  {}'.format(px,py,pz))
                     print('bunit = {}, change = {}, dr = {} \n \n'.format(Bunit, change, dr))
             if i % 1000 == 0:
-               print("theta = {}, r = {}Rj".format(coordinates[1], coordinates[0]/Rj))
+               print("theta = {}".format(coordinates[1]))
+               print(B_current, B_notcurrent,r/Rj,'\n')
 
         return points
 
@@ -252,6 +275,6 @@ class DifferentFieldsTrace:
  
 
 
-test = DifferentFieldsTrace([30*Rj, np.pi/2, np.pi/2], model = 'VIT4')
+test = InternalAndCS([30*Rj, np.pi/2, np.pi/2], model = 'VIP4')
 test.plotTrace()
 
