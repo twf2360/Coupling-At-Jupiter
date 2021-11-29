@@ -71,7 +71,6 @@ class field_models(object):
             B - array containing the B field components in a spherical system III 
                 reference frame.
         
-        
         '''
         
         #set current sheet parameters
@@ -223,7 +222,7 @@ class field_models(object):
                 O6
                 O4
                 SHA
-		dipole
+		        dipole
                 
                 
         OUTPUT:
