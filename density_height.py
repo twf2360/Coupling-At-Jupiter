@@ -16,86 +16,76 @@ from radial_outflow import radialOutflow
 
 Rj = 7.14 * 10 ** 7
 class DensityHeight:
-    def __init__(self, numpoints):
+    def __init__(self, numpoints, start, stop):
         self.radialOutflowFunctions = radialOutflow(28)
         self.numpoints = numpoints
         self.help = HelpfulFunctions()
+        self.start = start
+        self.stop = stop 
 
-    def scaleheight(self, r):
+    def scaleheight(self, R):
         a1 = -0.116
         a2 = 2.14
         a3 = -2.05
         a4 = 0.491
         a5 = 0.126
-        R = np.log10(r/(6*Rj))
-        h = a1 + a2 * R + a3 * R**2 + a4 * R**3 + a5 * R**5
-        H = 10**h
-        return h
+        r = np.log10(R/(6*Rj)) #<-- this is what we need to check 
+        h = a1 + a2 * r + a3 * r**2 + a4 * r**3 + a5 * r**5
+        H = 10**h #<--- this too 
+        return H
 
     def density(self, n_0, z, H):
         n = n_0 * np.exp(-z/H)
         return n
 
-    def plotting(self):
-        radii, n_0s = self.radialOutflowFunctions.plotRadialDensity(start=5*Rj, end = 75*Rj, numpoints=self.numpoints)
-
-        zs =  np.linspace(5*Rj, 75 *Rj, self.numpoints)
+    def plotting(self, density = 'on',scale_height = 'off'):
+        radii, n_0s = self.radialOutflowFunctions.plotRadialDensity(start=self.start*Rj, end = self.stop*Rj, numpoints=self.numpoints)
+        zs =  np.linspace(self.start*Rj, self.stop *Rj, self.numpoints)
         zs_rj = zs/Rj
         ns = []
-        for z in zs:
-            n_row = []
-            for i in range(len(radii)):
-                H = self.scaleheight(radii[i]*Rj)
-                n_0 = n_0s[i]
-                n = self.density(n_0, z, H)
-                n_row.append(n)
-            ns.append(n_row)
-        print(ns)
-        plt.contour(radii, zs_rj, ns, 20, cmap = 'RdGy')
-        plt.show()
+        H_rj_s = []
+        if density == 'on':
+            for z in zs:
+                n_row = []
+                for i in range(len(radii)):
+                    H = self.scaleheight(radii[i]*Rj) *Rj
+                    #print(H)
+                    n_0 = n_0s[i]
+                    n = self.density(n_0, z, H)
+                    n_row.append(n)
+                ns.append(n_row)
+            #print(ns)
+            
+            density_0_cm = np.array(n_0s)/ (10**6)
+            density_cm = np.array(ns)/(10**6)
+            fig, (ax1, ax2) = plt.subplots(1,2, figsize =(25,13))
+            
+            cont = ax2.contourf(radii, zs_rj, density_cm, cmap = 'spring')
+            ax2.set(xlabel = 'Radial Distance($R_J$)', ylabel = 'Height($R_J$)', title = 'Contour plot of density depending on radial density and height')
+            ax2.yaxis.set_ticks_position('both')
+            plt.colorbar(cont)
+            
+            ax1.plot(radii, density_0_cm, label = '$n_0$')
+            ax1.legend()
+            
+            ax1.set(xlabel='Radius (RJ)', ylabel='Density ($cm^{-3}$)', title='Density Vs Radial Distsance at height = 0')
+            ax1.yaxis.set_ticks_position('both')
+            plt.suptitle('Density Variations as a function of height and radial distance ')
+            #fig.tight_layout()
+            plt.show()
+        if scale_height == 'on':
+            for r in radii:
+                H_rj_s.append(self.scaleheight(r * Rj))
+            fig, ax = plt.subplots(figsize =(25,13))
+            ax.plot(radii, H_rj_s, label = 'Scale Height', color = 'g')
+            plt.xscale('log')
+            ax.set(xlabel='Radius (RJ)', ylabel='Scale Height ($R_J$)', title='Scale height depenence on radial distance')
+            plt.xlim(0, 100)
+            plt.show()
 
 
-test = DensityHeight(100)
-test.plotting()    
+
+test = DensityHeight(numpoints= 100, start= 5, stop = 70)
+test.plotting(scale_height='on', density = 'off')    
 
 
-    
-'''
-    def scale_heights(self):
-        radii, n_0s = self.radialOutflowFunctions.plotRadialDensity(numpoints=self.numpoints, start=5*Rj, end= 55*Rj)
-        scale_heights = []
-        for r in radii:
-            H = self.scaleheight(r)
-            scale_heights.append(H)
-        return radii, n_0s, scale_heights
-    
-    def density(self, n_0, z, H):
-        n = n_0 * np.exp(-z/H)
-        return n
-    
-    def plotting(self):
-        radii, n_0s, scale_heights = self.scale_heights()
-        zs = np.linspace(5*Rj, 55 *Rj, self.numpoints)
-        ns = []
-        for i in range(len(zs)) :
-            for j in range(len(radii)):
-                n = self.density(n_0s[i], zs[i], scale_heights[])
-
-test = DensityHeight(100)
-test.plotting()
-
-    
-        
-
- 
-zs = np.linspace(0, 50 *Rj, self.numpoints)
-        radii, n_0s, scale_heights = self.scale_heights()
-        ns = []
-        for i in range(self.numpoints):
-            n = self.density(n_0s[i], zs[i], scale_heights[i])
-            ns.append(n)
-
-        plt.contour(scale_heights, radii,n, 20, cmap = 'RdGy')
-        plt.show()
-
-'''

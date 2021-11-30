@@ -71,9 +71,10 @@ class radialOutflow:
             densities.append(self.radial_density(r))
             R = r/Rj
             radii.append(R)
-        fig, ax = plt.subplots()
+        
         
         if show == 'on':
+            fig, ax = plt.subplots()
             ax.plot(radii, densities, label = 'density')
             ax.legend()
             ax.set(xlabel='Radius (RJ)', ylabel='Density ($m^3$)', title='Density Vs Radial Distsance')
