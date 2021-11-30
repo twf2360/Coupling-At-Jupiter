@@ -64,7 +64,7 @@ class radialOutflow:
         n = (3.2e8 * R**(-6.9) + 9.9*R**(-1.28)) * 1e6 #think it should be R
         return n
 
-    def plotRadialDensity(self, numpoints = 1000, start = 5*Rj, end = 70*Rj):
+    def plotRadialDensity(self, numpoints = 1000, start = 5*Rj, end = 70*Rj, show = 'off'):
         densities = []
         radii = []
         for r in np.linspace(start, end, numpoints):
@@ -72,13 +72,16 @@ class radialOutflow:
             R = r/Rj
             radii.append(R)
         fig, ax = plt.subplots()
-        ax.plot(radii, densities, label = 'density')
-        ax.legend()
-        ax.set(xlabel='Radius (RJ)', ylabel='Density ($m^3$)', title='Density Vs Radial Distsance')
-        ax.yaxis.set_ticks_position('both')
-        plt.yscale("log")
-        plt.savefig('images/radial_density_profile.png')
-        plt.show()
+        
+        if show == 'on':
+            ax.plot(radii, densities, label = 'density')
+            ax.legend()
+            ax.set(xlabel='Radius (RJ)', ylabel='Density ($m^3$)', title='Density Vs Radial Distsance')
+            ax.yaxis.set_ticks_position('both')
+            plt.yscale("log")
+            plt.savefig('images/radial_density_profile.png')
+            plt.show()
+        return radii, densities
         
     def plotRadialDensityTwoSegments(self, numpoints = 1000, start1 = 5*Rj, end1 = 20*Rj, start2 =50*Rj, end2 =70*Rj):
         densities1 = []
@@ -193,7 +196,7 @@ class radialOutflow:
         plt.savefig('images/radial_flow_plot.png')
         plt.show()
 
-        
+'''     
 radial = radialOutflow(28)
 
 radial.datapoints(10, 100, 200, [280, 500, 1300])
@@ -203,4 +206,4 @@ radial.plotRadialDensityTwoSegments() #find a way to overlay the plots on top of
 
 
 
-
+'''

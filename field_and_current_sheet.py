@@ -99,6 +99,9 @@ class InternalAndCS:
             B = np.array([B_x, B_y, B_z])
             coordinates = [px,py,pz] #change the definition of the coordinates from spherical to cartesian 
             Bunit = self.help.unit_vector_cart(B) #calculates the unit vector in cartesian direction
+            if np.isclose(B_overall[0],  0) or np.isclose(B_notcurrent[0], 0):
+                pr, ptheta, pphi = self.help.cart_to_sph(px, py, pz)
+                print(Bunit, '[{}, {}, {}]'.format(pr/Rj, ptheta, pphi))
             dr = r * 0.001  #THIS IS HOW WE UPPDATE THE COORDINATES - IF IT TAKES TOO LONG, THIS NEEDS CHANGING IF IT TAKES TOO LONG OR IS GETTING WEIRD CLOSE TO PLANET
             change = dr * Bunit * direction #the change from this coordinate to the next one is calculated
             coordinates = np.add(coordinates, change) #add the change to the current co ordinate
@@ -155,10 +158,11 @@ class InternalAndCS:
         colours = ['b','g','r','c','m','k',]
         color_index = 0
         for point in startingPoints:
+            print('Starting point = {}'.format(point))
             plot_points = np.array(self.trace_magnetic_field(starting_cordinates=point))
 
             
-            plottable_list = np.transpose(plot_points)
+            plottable_list = np.transpose(plot_points) #turns from px,py,pz to [[x0, x1, x2, ...], [y0, y1, y2, ....], [z0, z1, z2, ....]]
 
 
             #turning the axis into Rj
@@ -218,6 +222,6 @@ class InternalAndCS:
 
 
 
-test = InternalAndCS([30*Rj, np.pi/2, np.pi/2], model = 'VIP4')
+test = InternalAndCS([30*Rj, np.pi/2, 248* np.pi/180], model = 'VIP4')
 test.plotTrace()
 #test.plotMultipleLines()
