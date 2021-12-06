@@ -12,7 +12,7 @@ from mag_field_models import field_models
 import scipy
 import scipy.special
 from radial_outflow import radialOutflow
-
+from matplotlib import ticker, cm
 
 Rj = 7.14 * 10 ** 7
 class DensityHeight:
@@ -60,19 +60,22 @@ class DensityHeight:
             density_cm = np.array(ns)/(10**6)
             fig, (ax1, ax2) = plt.subplots(1,2, figsize =(25,13))
             
-            cont = ax2.contourf(radii, zs_rj, density_cm, cmap = 'spring')
+            cont = ax2.contourf(radii, zs_rj, density_cm, cmap = 'bone', locator=ticker.LogLocator(), label ='Density')
+            #cont.ax2.set_ylabel('Density (cm^-3)')
             ax2.set(xlabel = 'Radial Distance($R_J$)', ylabel = 'Height($R_J$)', title = 'Contour plot of density depending on radial density and height')
             ax2.yaxis.set_ticks_position('both')
-            plt.colorbar(cont)
+            plt.colorbar(cont, label = 'Density ($cm^{-3}$')
             
             ax1.plot(radii, density_0_cm, label = '$n_0$')
             ax1.legend()
             
             ax1.set(xlabel='Radius (RJ)', ylabel='Density ($cm^{-3}$)', title='Density Vs Radial Distsance at height = 0')
             ax1.yaxis.set_ticks_position('both')
+            ax1.set_yscale("log")
             plt.suptitle('Density Variations as a function of height and radial distance ')
             #fig.tight_layout()
             plt.show()
+        
         if scale_height == 'on':
             for r in radii:
                 H_rj_s.append(self.scaleheight(r * Rj))
@@ -85,7 +88,7 @@ class DensityHeight:
 
 
 
-test = DensityHeight(numpoints= 100, start= 5, stop = 70)
-test.plotting(scale_height='on', density = 'off')    
+test = DensityHeight(numpoints= 100, start= 5, stop = 20)
+test.plotting(scale_height='off', density = 'on')    
 
 
