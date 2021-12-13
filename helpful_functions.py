@@ -30,7 +30,6 @@ class HelpfulFunctions():
         return x,y
         
     def sph_to_cart(self, r, theta, phi):
-
         x = r*np.sin(theta)*np.cos(phi)
         y = r*np.sin(theta)*np.sin(phi)
         z = r*np.cos(theta)
@@ -59,56 +58,4 @@ class HelpfulFunctions():
         return vector/norm
 
 
-    def S3LH_to_S3RH(self, r, theta, phi):
-        ''' 
-        takes a co-ordinate point is left handed system three and turns it into right handed system three. 
-
-        ... pain
-        ''' 
-        RHr = r 
-        if 0<= theta < np.pi/2: 
-            RHtheta = np.pi/2 - theta
-        elif -np.pi/2 <= theta < 0:
-            RHtheta = np.pi/2 + abs(theta)
-        else:
-            print('theta not recognised for S3LH to S3RH; \n theta = {}'.format(theta))
-            sys.exit()
-
-        RHPhi = 2*np.pi - phi
-        return RHr, RHtheta, RHPhi
-
-    def S3RH_to_S3LH(self, r, theta, phi):
-        rLH = r
-        phiLH = 2*np.pi - phi
-        if 0 < theta <= np.pi/2:
-            thetaLH = np.pi/2 - theta
-        elif np.pi/2 < theta <= np.pi:
-            thetaLH = -(theta - np.pi/2)
-        else:
-            print('theta not recognised: \n theta = {}'.format(theta))
-            sys.exit()
-        return rLH, thetaLH, phiLH
-
     
-
-    def B_S3LH_to_S3RH(self, Br,Btheta, Bphi):# , hemipshere = 'lower'):
-        Br_RH = Br
-        Bphi_RH = -Bphi
-        Btheta_RH = - Btheta
-
-        '''
-        if hemipshere == 'upper':
-            Btheta_RH = -Btheta
-        if hemipshere == 'lower':
-            Btheta_RH = Btheta
-        '''
-        return Br_RH, Btheta_RH, Bphi_RH
-
-        
-        
-
-
-'''
-hpf = HelpfulFunctions()
-test2_point = [0,1,0]
-'''
