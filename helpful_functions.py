@@ -18,7 +18,17 @@ class HelpfulFunctions():
                             np.linspace(points_min, points_max, NumPoints),
                             np.linspace(points_min, points_max, NumPoints))
         return x,y,z
+    
+    def makegrid_2d(self, numpoints, gridsize):
+        x,y = np.meshgrid(np.linspace(0, gridsize, numpoints),
+                            np.linspace(0, gridsize, numpoints))
+        return x,y
 
+    def makegrid_2d_negatives(self, numpoints, gridsize):
+        x,y = np.meshgrid(np.linspace(-gridsize/2, gridsize/2, numpoints),
+                            np.linspace(-gridsize/2, gridsize/2, numpoints))
+        return x,y
+        
     def sph_to_cart(self, r, theta, phi):
 
         x = r*np.sin(theta)*np.cos(phi)

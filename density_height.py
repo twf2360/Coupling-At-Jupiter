@@ -60,11 +60,11 @@ class DensityHeight:
             density_cm = np.array(ns)/(10**6)
             fig, (ax1, ax2) = plt.subplots(1,2, figsize =(25,13))
             
-            cont = ax2.contourf(radii, zs_rj, density_cm, cmap = 'bone', locator=ticker.LogLocator(), label ='Density')
-            #cont.ax2.set_ylabel('Density (cm^-3)')
+            cont = ax2.contourf(radii, zs_rj, density_cm, cmap = 'bone', locator=ticker.LogLocator())
+
             ax2.set(xlabel = 'Radial Distance($R_J$)', ylabel = 'Height($R_J$)', title = 'Contour plot of density depending on radial density and height')
             ax2.yaxis.set_ticks_position('both')
-            plt.colorbar(cont, label = 'Density ($cm^{-3}$')
+            plt.colorbar(cont, label = 'Density ($cm^{-3}$)')
             
             ax1.plot(radii, density_0_cm, label = '$n_0$')
             ax1.legend()
@@ -86,9 +86,11 @@ class DensityHeight:
             plt.xlim(0, 100)
             plt.show()
 
-
+    
+'''
 
 test = DensityHeight(numpoints= 100, start= 5, stop = 20)
 test.plotting(scale_height='off', density = 'on')    
 
 
+'''
