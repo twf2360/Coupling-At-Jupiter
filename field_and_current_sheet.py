@@ -67,6 +67,7 @@ class InternalAndCS:
         if starting_cordinates == None:
             starting_cordinates = self.starting_cordinates
         coordinates = starting_cordinates
+        coordinates[2] = 2*np.pi - coordinates[2] #changing from LH input to RH
         points = [] #this is the list that will eventually be plotted
         Br_list = []
         i = 0
@@ -102,9 +103,6 @@ class InternalAndCS:
             B = np.array([B_x, B_y, B_z])
             coordinates = [px,py,pz] #change the definition of the coordinates from spherical to cartesian 
             Bunit = self.help.unit_vector_cart(B) #calculates the unit vector in cartesian direction
-            if np.isclose(B_overall[0],  0) or np.isclose(B_notcurrent[0], 0):
-                pr, ptheta, pphi = self.help.cart_to_sph(px, py, pz)
-                print(Bunit, '[{}, {}, {}]'.format(pr/Rj, ptheta, pphi))
             dr = r * 0.001  #THIS IS HOW WE UPPDATE THE COORDINATES - IF IT TAKES TOO LONG, THIS NEEDS CHANGING IF IT TAKES TOO LONG OR IS GETTING WEIRD CLOSE TO PLANET
             change = dr * Bunit * direction #the change from this coordinate to the next one is calculated
             coordinates = np.add(coordinates, change) #add the change to the current co ordinate
@@ -254,6 +252,6 @@ class InternalAndCS:
         return None
     
 test = InternalAndCS([30*Rj, np.pi/2, 248* np.pi/180], model = 'VIP4')
-test.find_mag_equator(point=[30*Rj, np.pi/2, 248* np.pi/180])
+test.find_mag_equator(point=[30*Rj, np.pi/2, 112* np.pi/180])
 #test.plotTrace()
 #test.plotMultipleLines()
