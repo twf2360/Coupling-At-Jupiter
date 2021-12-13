@@ -68,7 +68,7 @@ class InternalAndCS:
             starting_cordinates = self.starting_cordinates
         coordinates = starting_cordinates
         points = [] #this is the list that will eventually be plotted
-        
+        Br_list = []
         i = 0
         direction = 1
         while True:
@@ -81,7 +81,9 @@ class InternalAndCS:
                     direction = -1
                     coordinates = starting_cordinates
                     points.reverse()
+                    Br_list.reverse()
                 else:    
+                    Br_list.reverse()
                     break
 
             
@@ -95,6 +97,7 @@ class InternalAndCS:
             B_current = self.field.CAN_sheet(r/Rj, coordinates[1], coordinates[2]) #calculates the magnetic field due to the current sheet in spherical polar
             B_notcurrent = np.array([B_r, B_theta, B_phi]) 
             B_overall = np.add(B_current, B_notcurrent) #adds up the total magnetic field 
+            Br_list.append(B_overall[0])
             B_x, B_y, B_z = self.help.Bsph_to_Bcart(B_overall[0], B_overall[1], B_overall[2], coordinates[0], coordinates[1],coordinates[2]) #converts magnetic field to cartesian
             B = np.array([B_x, B_y, B_z])
             coordinates = [px,py,pz] #change the definition of the coordinates from spherical to cartesian 
@@ -116,12 +119,12 @@ class InternalAndCS:
                     print(' x= {}, y = {}, z =  {}'.format(px,py,pz))
                     print('bunit = {}, change = {}, dr = {} \n \n'.format(Bunit, change, dr))
  
-        return points
+        return points, Br_list
 
 
 
     def plotTrace(self):
-        plot_points = np.array(self.trace_magnetic_field(printing='on'))
+        plot_points = np.array(self.trace_magnetic_field(printing='off')[0])
 
         plottable_list = np.transpose(plot_points)
 
@@ -159,7 +162,7 @@ class InternalAndCS:
         color_index = 0
         for point in startingPoints:
             print('Starting point = {}'.format(point))
-            plot_points = np.array(self.trace_magnetic_field(starting_cordinates=point))
+            plot_points = np.array(self.trace_magnetic_field(starting_cordinates=point)[0])
 
             
             plottable_list = np.transpose(plot_points) #turns from px,py,pz to [[x0, x1, x2, ...], [y0, y1, y2, ....], [z0, z1, z2, ....]]
@@ -189,6 +192,7 @@ class InternalAndCS:
         #plt.legend()
         plt.savefig('images/mag_field_multi_trace_{}_inc_current.png'.format(self.model))
         plt.show()
+
     
     def plot2d(self):
         '''
@@ -220,8 +224,36 @@ class InternalAndCS:
         z = np.outer(np.ones(np.size(u)), np.cos(v))
         return x, y, z
 
+    def find_mag_equator(self, point):
 
+        print(' \n Starting point = {}'.format(point))
+        points, Br_list = self.trace_magnetic_field(starting_cordinates=point)
+        index = self.find_index_negative(listInput = Br_list)
+        def interpolate(i):
+            point1 = points[i-1]
+            point2 = points[i]
+            theta1 = self.help.cart_to_sph(point1[0], point1[1], point1[2])[1]
+            theta2 = self.help.cart_to_sph(point2[0], point2[1], point2[2])[1]
+            Br_1 = Br_list[i-1]
+            Br_2 = Br_list[i]
+            theta = (theta1 + (abs(Br_2/Br_1) *theta2))/(1 + abs(Br_2/Br_1))
+            #print(theta, theta1, theta2, Br_1, Br_2)
+            return theta 
+        theta = interpolate(index)
+        print('mag field lies in plane theta = {}'.format(theta))
+        return theta
+            
 
+            
+    def find_index_negative(self, listInput):
+        for i in range(len(listInput)):
+            
+            if listInput[i] <= 0:
+                #print(i, listInput[i], listInput[i-1])
+                return i
+        return None
+    
 test = InternalAndCS([30*Rj, np.pi/2, 248* np.pi/180], model = 'VIP4')
-test.plotTrace()
+test.find_mag_equator(point=[30*Rj, np.pi/2, 248* np.pi/180])
+#test.plotTrace()
 #test.plotMultipleLines()
