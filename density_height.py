@@ -92,5 +92,4 @@ class DensityHeight:
 test = DensityHeight(numpoints= 100, start= 5, stop = 20)
 test.plotting(scale_height='off', density = 'on')    
 
-
 '''

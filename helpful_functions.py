@@ -25,8 +25,8 @@ class HelpfulFunctions():
         return x,y
 
     def makegrid_2d_negatives(self, numpoints, gridsize):
-        x,y = np.meshgrid(np.linspace(-gridsize/2, gridsize/2, numpoints),
-                            np.linspace(-gridsize/2, gridsize/2, numpoints))
+        x,y = np.meshgrid(np.linspace(-gridsize, gridsize, numpoints *2),
+                            np.linspace(-gridsize, gridsize, numpoints*2))
         return x,y
         
     def sph_to_cart(self, r, theta, phi):
