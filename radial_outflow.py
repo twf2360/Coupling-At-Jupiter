@@ -126,6 +126,7 @@ class radialOutflow:
         rho = self.avgIonMass * n
         denom = np.sqrt((mu_0 * rho))
         Va = magB/ denom
+        print('va = {}, rho = {}, magB = {}'.format(Va, rho, magB))
         #print("magB = {}, denom = {} \n n = {}, rho = {}, mu = {}, mass = {} va = {} \n \n".format(magB, denom, n, rho, mu_0, self.avgIonMass, Va))
         return Va
 
@@ -197,7 +198,7 @@ class radialOutflow:
         plt.savefig('images/radial_flow_plot.png')
         plt.show()
 
-'''     
+'''  
 radial = radialOutflow(28)
 
 radial.datapoints(10, 100, 200, [280, 500, 1300])
