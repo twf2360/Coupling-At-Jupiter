@@ -101,7 +101,7 @@ class InternalAndCS:
             Br_list.append(B_overall[0])
             B_x, B_y, B_z = self.help.Bsph_to_Bcart(B_overall[0], B_overall[1], B_overall[2], coordinates[0], coordinates[1],coordinates[2]) #converts magnetic field to cartesian
             B = np.array([B_x, B_y, B_z])
-            print(B)
+            #print(B)
             coordinates = [px,py,pz] #change the definition of the coordinates from spherical to cartesian 
             Bunit = self.help.unit_vector_cart(B) #calculates the unit vector in cartesian direction
             dr = r * 0.001  #THIS IS HOW WE UPPDATE THE COORDINATES - IF IT TAKES TOO LONG, THIS NEEDS CHANGING IF IT TAKES TOO LONG OR IS GETTING WEIRD CLOSE TO PLANET
@@ -242,7 +242,54 @@ class InternalAndCS:
         print('mag field lies in plane theta = {}'.format(theta))
         return theta
             
+    def traceFieldEquator(self):
+        tracer = self.trace_magnetic_field(printing='off')
+        plot_points, Br_list = np.array(tracer[0]), np.array(tracer[1])
+        plottable_list = np.transpose(plot_points)
 
+        fig = plt.figure()
+        ax = fig.gca(projection='3d')
+        
+
+        #turning the axis into Rj
+        plottable_list_rj = plottable_list/Rj
+
+        ax.plot(plottable_list_rj[0], plottable_list_rj[1], plottable_list_rj[2],color = 'black', label = 'Field Trace')
+        
+        #make the sphere and setup the plot
+        x,y, z = self.make_sphere()
+        ax.plot_surface(x, y, z, color = 'yellow', zorder=100, label = 'Jupiter')
+        ax.set_xlim3d(-40, 40)
+        ax.set_ylim3d(-40, 40)
+        ax.set_zlim3d(-40, 40)
+        ax.set_xlabel('$X, R_j$', fontsize=10)
+        ax.set_ylabel('$Y, R_J$', fontsize=10)
+        plt.title('Magnetic Field Trace using {} model, including current sheet'.format(self.model))
+        
+        index = self.find_index_negative(listInput = Br_list)
+        def interpolate(i):
+            point1 = plot_points[i-1]
+            point2 = plot_points[i]
+            theta1 = self.help.cart_to_sph(point1[0], point1[1], point1[2])[1]
+            theta2 = self.help.cart_to_sph(point2[0], point2[1], point2[2])[1]
+            Br_1 = Br_list[i-1]
+            Br_2 = Br_list[i]
+            theta = (theta1 + (abs(Br_2/Br_1) *theta2))/(1 + abs(Br_2/Br_1))
+            #print(theta, theta1, theta2, Br_1, Br_2)
+            return theta 
+        theta = interpolate(index)
+        r = self.starting_cordinates[0]
+        R_rj = r/Rj
+        start_phi = self.starting_cordinates[2]
+        output = self.help.sph_to_cart(R_rj, theta, start_phi)
+
+        equator_plot = np.array([[-output[0], -output[1], -output[2]],[output[0], output[1], output[2] ]])
+        transposed_equator = np.transpose(equator_plot)
+        ax.plot(transposed_equator[0], transposed_equator[1], transposed_equator[2], color = 'c', label = 'mag field equator')#, linewidth = 5.0)
+        print(transposed_equator)
+        #plt.legend()
+        plt.savefig('images/mag_field_trace_showing_B_equator.png'.format(self.model))
+        plt.show()
             
     def find_index_negative(self, listInput):
         for i in range(len(listInput)):
@@ -252,7 +299,8 @@ class InternalAndCS:
                 return i
         return None
     
-test = InternalAndCS([30*Rj, np.pi/2, 248* np.pi/180], model = 'VIP4')
-test.find_mag_equator(point=[30*Rj, np.pi/2, 112* np.pi/180])
+test = InternalAndCS([30*Rj, np.pi/2, 212* np.pi/180], model = 'VIP4')
+#test.find_mag_equator(point=[30*Rj, np.pi/2, 112* np.pi/180])
 #test.plotTrace()
 #test.plotMultipleLines()
+test.traceFieldEquator()
