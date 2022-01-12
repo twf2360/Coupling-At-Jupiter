@@ -298,9 +298,10 @@ class InternalAndCS:
                 #print(i, listInput[i], listInput[i-1])
                 return i
         return None
-    
+'''    
 test = InternalAndCS([30*Rj, np.pi/2, 212* np.pi/180], model = 'VIP4')
 #test.find_mag_equator(point=[30*Rj, np.pi/2, 112* np.pi/180])
 #test.plotTrace()
 #test.plotMultipleLines()
 test.traceFieldEquator()
+'''
