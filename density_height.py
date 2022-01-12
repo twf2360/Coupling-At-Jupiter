@@ -13,7 +13,7 @@ import scipy
 import scipy.special
 from radial_outflow import radialOutflow
 from matplotlib import ticker, cm
-
+from field_and_current_sheet import InternalAndCS
 Rj = 7.14 * 10 ** 7
 class DensityHeight:
     def __init__(self, numpoints, start, stop):
@@ -22,7 +22,7 @@ class DensityHeight:
         self.help = HelpfulFunctions()
         self.start = start
         self.stop = stop 
-
+        self.tracing = InternalAndCS()
     def scaleheight(self, R):
         a1 = -0.116
         a2 = 2.14
@@ -85,11 +85,56 @@ class DensityHeight:
             ax.set(xlabel='Radius (RJ)', ylabel='Scale Height ($R_J$)', title='Scale height depenence on radial distance')
             plt.xlim(0, 100)
             plt.show()
+    
+    def equators(self):
+        r = 30
+        theta = np.pi/2
+        phi_LH =  21* np.pi/180
+        phi_rh = 2 *np.pi - phi_LH
+        Btheta_eq = self.tracing.find_mag_equator(point=[r*Rj, theta,phi_LH])
+
+        centrifugaleq_theta_lat = self.help.centrifugal_equator(r, phi_rh)# +np.pi)
+        print(Btheta_eq, centrifugaleq_theta_lat)
+        '''
+        centrifugaleq_theta = np.pi/2 - centrifugaleq_theta_lat
+        if centrifugaleq_theta > np.pi/2:
+            diff = centrifugaleq_theta - np.pi/2
+            centrifugaleq_theta -= 2*diff
+        '''
+        #print(centrifugaleq_theta, Btheta_eq)
+        #print(centrifugaleq_LH_above_spin, centrifugaleq_RH_above_spin)
+
+        centrifual_eq = np.array([[-r * np.cos(centrifugaleq_theta_lat), - r * np.sin(centrifugaleq_theta_lat)], [r * np.cos(centrifugaleq_theta_lat),  r * np.sin(centrifugaleq_theta_lat)]])
+        b_eq = np.array([[-r * np.sin(Btheta_eq), - r * np.cos(Btheta_eq)], [r * np.sin(Btheta_eq),  r * np.cos(Btheta_eq)]])
+        spin_eq = np.array([[-r,0],[r,0]])
+
+        centrifual_eq_t = np.transpose(centrifual_eq)
+        b_eq_t = np.transpose(b_eq)
+        spin_eq_t = np.transpose(spin_eq)
+
+        fig, ax = plt.subplots()
+        
+        ax.plot(centrifual_eq_t[0] , centrifual_eq_t[1], color = 'c', label = 'Centrifugal Equator')
+        ax.plot(spin_eq_t[0], spin_eq_t[1], color = 'm', label = 'Spin Equator')
+        ax.plot(b_eq_t[0], b_eq_t[1], color = 'k', label = 'Magnetic Field Equator')
+
+        ax.add_patch(Circle((0,0), 1, color='y', zorder=100, label = "Jupiter"))
+        phi_lh_deg = phi_LH * 180/np.pi 
+        ax.set(xlim = (-30,30), ylim = (-5,5), xlabel = 'X $R_J$', ylabel = 'Y $R_J$', title = 'Different Equators at Jupiter, SYSIII longitude =   {:.0f} deg on RHS'.format(phi_lh_deg))
+        ax.set_aspect(aspect='equal')
+        plt.legend()
+        plt.show()
 
     
-'''
+        
+
+
+    
+
+
+    
 
 test = DensityHeight(numpoints= 100, start= 5, stop = 20)
-test.plotting(scale_height='off', density = 'on')    
+#test.plotting(scale_height='off', density = 'on')    
+test.equators()
 
-'''
