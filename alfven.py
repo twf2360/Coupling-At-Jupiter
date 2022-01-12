@@ -25,7 +25,7 @@ class AlfvenVel:
         self.numpoints = numpoints
         self.avgIonMass = avgIonMass * 1.67 * 10**-27
         self.help = HelpfulFunctions()
-        self.densityfunctions = DensityHeight(self.numpoints, self.start*Rj, self.stop*Rj)
+        self.densityfunctions = DensityHeight(self.numpoints, self.start, self.stop)
         self.gridx, self.gridy = self.help.makegrid_2d_negatives(self.numpoints ,gridsize= self.stop)
         self.radialfunctions = radialOutflow(self.avgIonMass)
         self.field = field_models()
@@ -33,8 +33,8 @@ class AlfvenVel:
     def calculator(self, B, n):
         magB = np.linalg.norm(B)
         rho = n * self.avgIonMass 
-        Va = magB/np.sqrt(rho * mu_0)
-       # print('b = {}, va = {}, rho = {}, magB = {}'.format(B, Va, rho, magB))
+        Va = magB/np.sqrt((rho * mu_0))
+        #print('b = {}, va = {}, rho = {}, magB = {}'.format(B, Va, rho, magB))
         return Va
 
     def const_phi(self):
@@ -81,12 +81,8 @@ class AlfvenVel:
         x_s.sort()
         y_s.sort()
         n_0s = []
-        for x in x_s:
-            if x ==0:
-                n_0s.append(1)
-                continue
-            n_0s.append(self.radialfunctions.radial_density(abs(x)*Rj))
-        print(n_0s)
+        #print(x_s, y_s)
+
         Vas = []
         for i in range(len(y_s)):
             print('new row, {} to go'.format(len(y_s)-i))
@@ -96,39 +92,45 @@ class AlfvenVel:
                 r = np.sqrt((x_s[j])**2 + (y_s[i])**2)
                 
                 #print(r)
-                if r <1:
-                    va = 1 *10 ** 15
+                if r <6:
+                    va = 1 *10 ** 2
                     Vas_row.append(va)
                     continue
-                n_0 = n_0s[j]
-                n = n_0
+                n = self.radialfunctions.radial_density(abs(r))
                 phi = np.arctan2(y_s[i],x_s[j])
-                #print(r, theta, phi)
-                #print(r, theta, phi)
+
                 B_r, B_theta, B_phi = self.field.Internal_Field(r, theta, phi, model=self.model) #calculates the magnetic field due to the internal field in spherical polar that point)
                 B_current = self.field.CAN_sheet(r, theta, phi) #calculates the magnetic field due to the current sheet in spherical polar
                 B_notcurrent = np.array([B_r, B_theta, B_phi]) 
                 #print(B_notcurrent)
+                #print(B_current)
                 B_overall = np.add(B_current, B_notcurrent) #adds up the total magnetic field 
-                B_x, B_y, B_z = self.help.Bsph_to_Bcart(B_overall[0], B_overall[1], B_overall[2], r*Rj, theta, phi)
+                B_x, B_y, B_z = self.help.Bsph_to_Bcart(B_overall[0], B_overall[1], B_overall[2], r, theta, phi)
                 B = np.array([B_x, B_y, B_z])
                 #print(B_notcurrent)
+                #print(B)
+                #B =  B/(10**4) <- is chris' code outputting a Gauss or a Tesla value? 
                 va = self.calculator(B, n)
                 Vas_row.append(va)
+                if np.isclose(r, 6):
+                    print('b = {}, n = {}, va = {}, magb = {}'.format(B, n, va, np.linalg.norm(B)))
+
             Vas.append(Vas_row)
         Vas_km = np.array(Vas)/(1000)
         #log_vas_km = np.log(Vas_km)
         fig, ax = plt.subplots()
-        cont = ax.contourf(self.gridx, self.gridy, Vas_km, cmap = 'bone', locator=ticker.LogLocator())
+        cont = ax.contourf(self.gridx, self.gridy, Vas_km, cmap = 'bone')#, locator=ticker.LogLocator())
         ax.add_patch(Circle((0,0), 1, color='y', zorder=100, label = "Jupiter"))
         ax.add_patch(Circle((0,0), 6, color='c', zorder=90, label = "Io Orbital Radius"))
         ax.legend()
         ax.set_xlim(-30,30)
         ax.set_ylim(-30,30)
-        ax.set(xlabel = 'x $R_J$', ylabel = 'y $R_J$', title = 'alfven velocity in the spin latitude = 0 plane')
+        degrees = theta * 180 /np.pi
+        ax.set(xlabel = 'x $R_J$ \n CML is vertically upwards', ylabel = 'y $R_J$', title = 'alfven velocity in the colatitude = {:.0f}{} plane'.format(degrees, u"\N{DEGREE SIGN}"))
         fig.colorbar(cont, label = '$V_a km$')
         ax.set_aspect('equal', adjustable = 'box')
-        plt.show()
+        plt.savefig('images/va_topdown.png')
+        plt.show() 
         if any(va < 1000000 in row for row in Vas_km):
             print(va)
 
@@ -196,6 +198,7 @@ class AlfvenVel:
 
 test = AlfvenVel(numpoints=200)
 test.top_down()
+
                 
 
 

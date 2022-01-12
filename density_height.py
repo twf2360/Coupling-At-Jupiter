@@ -29,7 +29,7 @@ class DensityHeight:
         a3 = -2.05
         a4 = 0.491
         a5 = 0.126
-        r = np.log10(R/(6*Rj)) #<-- this is what we need to check 
+        r = np.log10(R/6) #<-- this is what we need to check 
         h = a1 + a2 * r + a3 * r**2 + a4 * r**3 + a5 * r**5
         H = 10**h #<--- this too 
         return H
@@ -39,16 +39,16 @@ class DensityHeight:
         return n
 
     def plotting(self, density = 'on',scale_height = 'off'):
-        radii, n_0s = self.radialOutflowFunctions.plotRadialDensity(start=self.start*Rj, end = self.stop*Rj, numpoints=self.numpoints)
-        zs =  np.linspace(self.start*Rj, self.stop *Rj, self.numpoints)
-        zs_rj = zs/Rj
+        radii, n_0s = self.radialOutflowFunctions.plotRadialDensity(start=self.start, end = self.stop, numpoints=self.numpoints)
+        zs =  np.linspace(self.start, self.stop, self.numpoints)
         ns = []
         H_rj_s = []
+        Hs = []
         if density == 'on':
             for z in zs:
                 n_row = []
                 for i in range(len(radii)):
-                    H = self.scaleheight(radii[i]*Rj) *Rj
+                    H = self.scaleheight(radii[i]) 
                     #print(H)
                     n_0 = n_0s[i]
                     n = self.density(n_0, z, H)
@@ -60,7 +60,7 @@ class DensityHeight:
             density_cm = np.array(ns)/(10**6)
             fig, (ax1, ax2) = plt.subplots(1,2, figsize =(25,13))
             
-            cont = ax2.contourf(radii, zs_rj, density_cm, cmap = 'bone', locator=ticker.LogLocator())
+            cont = ax2.contourf(radii, zs, density_cm, cmap = 'bone', locator=ticker.LogLocator())
 
             ax2.set(xlabel = 'Radial Distance($R_J$)', ylabel = 'Height($R_J$)', title = 'Contour plot of density depending on radial density and height')
             ax2.yaxis.set_ticks_position('both')
@@ -78,18 +78,18 @@ class DensityHeight:
         
         if scale_height == 'on':
             for r in radii:
-                H_rj_s.append(self.scaleheight(r * Rj))
+                Hs.append(self.scaleheight(r))
             fig, ax = plt.subplots(figsize =(25,13))
-            ax.plot(radii, H_rj_s, label = 'Scale Height', color = 'g')
-            plt.xscale('log')
+            ax.plot(radii, Hs, label = 'Scale Height', color = 'g')
+            #plt.xscale('log')
             ax.set(xlabel='Radius (RJ)', ylabel='Scale Height ($R_J$)', title='Scale height depenence on radial distance')
             plt.xlim(0, 100)
             plt.show()
 
     
-'''
 
+'''
 test = DensityHeight(numpoints= 100, start= 5, stop = 20)
-test.plotting(scale_height='off', density = 'on')    
+test.plotting(scale_height='on', density = 'on')    
 
 '''
