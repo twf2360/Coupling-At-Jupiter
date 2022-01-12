@@ -62,7 +62,7 @@ class HelpfulFunctions():
         R SHOULD BE INPUT IN RJ
         PHI SHOULD BE IN WEST (RH) LONGITUDE
         eq from https://agupubs.onlinelibrary.wiley.com/doi/epdf/10.1029/2020JA028713 eq 2 
-        returns the height over the jovigraphic equator
+        returns the theta latitude of the centrifugal equator! 
         '''
         phiLH = 2 * np.pi - phi
         a = 1.66 * np.pi / 180
@@ -73,6 +73,12 @@ class HelpfulFunctions():
         centrifualEq = (a * np.tanh(b*r -c)+ d) * np.sin(phiLH - e)
 
         return centrifualEq 
+
+    def height_centrifugal_equator(self, r, phi):
+        latitude = self.centrifugal_equator(r, phi)
+        H = r * np.sin(latitude)
+        return H 
+
 
         
 
