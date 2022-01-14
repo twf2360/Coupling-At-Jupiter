@@ -136,10 +136,5 @@ class DensityHeight:
 
 '''
 test = DensityHeight(numpoints= 100, start= 5, stop = 20)
-<<<<<<< HEAD
-#test.plotting(scale_height='off', density = 'on')    
-test.equators()
-=======
 test.plotting(scale_height='on', density = 'on')    
->>>>>>> topdown
-
+'''
