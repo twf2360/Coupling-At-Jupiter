@@ -40,7 +40,7 @@ class radialOutflow:
     def flow_velocity(self, r, mdot):
         ''' 
         inputs:
-        r = radial distance 
+        r = radial distance in rj
         mdot = mass loading rate 
         m = average ion mass
 
@@ -53,24 +53,24 @@ class radialOutflow:
         #height of plasma torus
         z = 4 * Rj
         #radial cross sectional area of plasma torus
-        A = z * 2 * np.pi * r
+        A = z * 2 * np.pi * r * Rj
 
         v =  mdot/(n*self.avgIonMass*A)
         return v
 
     def radial_density(self, r):
-        
-        R = r/Rj
-        n = (3.2e8 * R**(-6.9) + 9.9*R**(-1.28)) * 1e6 #think it should be R
+        '''
+        r in rj
+        '''
+        n = (3.2e8 * r**(-6.9) + 9.9*r**(-1.28)) * 1e6 #think it should be R
         return n
 
-    def plotRadialDensity(self, numpoints = 1000, start = 5*Rj, end = 70*Rj, show = 'off'):
+    def plotRadialDensity(self, numpoints = 1000, start = 5, end = 70, show = 'off'):
         densities = []
         radii = []
         for r in np.linspace(start, end, numpoints):
             densities.append(self.radial_density(r))
-            R = r/Rj
-            radii.append(R)
+            radii.append(r)
         
         
         if show == 'on':
@@ -84,20 +84,18 @@ class radialOutflow:
             plt.show()
         return radii, densities
         
-    def plotRadialDensityTwoSegments(self, numpoints = 1000, start1 = 5*Rj, end1 = 20*Rj, start2 =50*Rj, end2 =70*Rj):
+    def plotRadialDensityTwoSegments(self, numpoints = 1000, start1 = 5, end1 = 20, start2 =50, end2 =70):
         densities1 = []
         radii1 = []
         densities2 = []
         radii2 = []
         for r in np.linspace(start1, end1, numpoints):
             densities1.append(self.radial_density(r))
-            R = r/Rj
-            radii1.append(R)
+            radii1.append(r)
         
         for r in np.linspace(start2, end2, numpoints):
             densities2.append(self.radial_density(r))
-            R = r/Rj
-            radii2.append(R)
+            radii2.append(r)
         
         fig, (ax1, ax2) = plt.subplots(2)
         ax1.semilogy(radii1, densities1, label = 'density section 1') #change to ax.plot to remove log scale
@@ -121,19 +119,19 @@ class radialOutflow:
 
         returns alfven velocity at point r 
         '''
-        magB = B0 * (Rj/r)**3
+        magB = B0 * (1/r)**3
         n = self.radial_density(r)
         rho = self.avgIonMass * n
         denom = np.sqrt((mu_0 * rho))
         Va = magB/ denom
-        print('va = {}, rho = {}, magB = {}'.format(Va, rho, magB))
+        #print('va = {}, rho = {}, magB = {}'.format(Va, rho, magB))
         #print("magB = {}, denom = {} \n n = {}, rho = {}, mu = {}, mass = {} va = {} \n \n".format(magB, denom, n, rho, mu_0, self.avgIonMass, Va))
         return Va
 
     def datapoints(self, minR_RJ, maxR_RJ, numpoints, mdots):
         minR = minR_RJ * Rj
         maxR = maxR_RJ * Rj
-        r_values = np.linspace(minR, maxR, numpoints)
+        r_values = np.linspace(minR_RJ, maxR_RJ, numpoints)
         alfven_vel_values = []
         flow_values = dict()
 
@@ -179,11 +177,11 @@ class radialOutflow:
         
         for key in v_values:
             v_kms = np.array(v_values[key]) /1000
-            ax.plot(Rj_values, v_kms, label = 'mdot ={}'.format(key))
+            ax.plot(r_values, v_kms, label = 'mdot ={}'.format(key))
             
         #print(va_values)
         va_kms = np.array(va_values)/1000
-        ax.plot(Rj_values, va_kms, label = 'local alfven velocity')
+        ax.plot(r_values, va_kms, label = 'local alfven velocity')
         ax.legend()
         box = ax.get_position()
         #ax.set_position([box.x0, box.y0 + box.height * 0.1,
@@ -198,14 +196,13 @@ class radialOutflow:
         plt.savefig('images/radial_flow_plot.png')
         plt.show()
 
-'''  
+'''
 radial = radialOutflow(28)
 
 radial.datapoints(10, 100, 200, [280, 500, 1300])
 radial.plotOutflow()
-radial.plotRadialDensity()
+radial.plotRadialDensity(show='on')
 radial.plotRadialDensityTwoSegments() #find a way to overlay the plots on top of each other?
 
-
-
 '''
+
