@@ -25,8 +25,8 @@ class HelpfulFunctions():
         return x,y
 
     def makegrid_2d_negatives(self, numpoints, gridsize):
-        x,y = np.meshgrid(np.linspace(-gridsize/2, gridsize/2, numpoints),
-                            np.linspace(-gridsize/2, gridsize/2, numpoints))
+        x,y = np.meshgrid(np.linspace(-gridsize, gridsize, numpoints *2),
+                            np.linspace(-gridsize, gridsize, numpoints*2))
         return x,y
         
     def sph_to_cart(self, r, theta, phi):
@@ -57,5 +57,28 @@ class HelpfulFunctions():
         norm = np.sqrt(vector[0]**2 + vector[1]**2 + vector[2]**2)
         return vector/norm
 
+    def centrifugal_equator(self, r, phi):
+        ''' 
+        R SHOULD BE INPUT IN RJ
+        PHI SHOULD BE IN WEST (RH) LONGITUDE
+        eq from https://agupubs.onlinelibrary.wiley.com/doi/epdf/10.1029/2020JA028713 eq 2 
+        returns the theta latitude of the centrifugal equator! 
+        '''
+        phiLH = 2 * np.pi - phi
+        a = 1.66 * np.pi / 180
+        b = 0.131
+        c = 1.62
+        d = 7.76 * np.pi /180
+        e = 249 * np.pi/180
+        centrifualEq = (a * np.tanh(b*r -c)+ d) * np.sin(phiLH - e)
 
-    
+        return centrifualEq 
+
+    def height_centrifugal_equator(self, r, phi):
+        latitude = self.centrifugal_equator(r, phi)
+        H = r * np.sin(latitude)
+        return H 
+
+
+        
+
