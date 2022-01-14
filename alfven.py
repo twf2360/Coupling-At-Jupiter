@@ -98,7 +98,6 @@ class AlfvenVel:
                     continue
                 n = self.radialfunctions.radial_density(abs(r))
                 phi = np.arctan2(y_s[i],x_s[j])
-
                 B_r, B_theta, B_phi = self.field.Internal_Field(r, theta, phi, model=self.model) #calculates the magnetic field due to the internal field in spherical polar that point)
                 B_current = self.field.CAN_sheet(r, theta, phi) #calculates the magnetic field due to the current sheet in spherical polar
                 B_notcurrent = np.array([B_r, B_theta, B_phi]) 
@@ -131,8 +130,6 @@ class AlfvenVel:
         ax.set_aspect('equal', adjustable = 'box')
         plt.savefig('images/va_topdown.png')
         plt.show() 
-        if any(va < 1000000 in row for row in Vas_km):
-            print(va)
 
     def calc_3d(self, r):
         spacing = 2 * np.pi / self.numpoints
