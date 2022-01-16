@@ -37,38 +37,9 @@ class AlfvenVel:
         #print('b = {}, va = {}, rho = {}, magB = {}'.format(B, Va, rho, magB))
         return Va
 
-    def const_phi(self):
-        ''' 
-        side on view
-        '''
-        phi = 0 #<- CHANGE THIS TO VIEW A SLIGHTLY DIFFERENT PLANE
-        n_0s = []
-        for x in self.gridx:
-            n_0s.append(self.radialfunctions.radial_density(x))
-        Vas = []
-        for i in range(len(self.gridy)):
-            z = gridy[i]
-            Vas_row = [] 
-            for j in range(len(self.gridx)):
-                r = gridx[j]
-                n_0 = n_0s[j]
-                H = self.densityfunctions.scaleheight(r) 
-                n = self.densityfunctions.density(n_0, z, H)
-                theta = np.arctan2(r,z)
-                coordinates =[r,theta , phi]
-                B_r, B_theta, B_phi = self.field.Internal_Field(r, coordinates[1], coordinates[2], model=self.model) #calculates the magnetic field due to the internal field in spherical polar that point)
-                B_current = self.field.CAN_sheet(r, coordinates[1], coordinates[2]) #calculates the magnetic field due to the current sheet in spherical polar
-                B_notcurrent = np.array([B_r, B_theta, B_phi]) 
-                #print(B_notcurrent)
-                B_overall = np.add(B_current, B_notcurrent) #adds up the total magnetic field 
-                B_cart = self.help.Bsph_to_Bcart(B_overall[0], B_overall[1], B_overall[2], r*Rj, theta, phi)
-                va = self.calculator(B_cart, n)
-                Vas_row.append(va)
-            Vas.append(Vas_row)
-        return Vas
-
+    #add a constant phi part too! 
     
-    def top_down(self):
+    def top_down_matched_equators(self):
         theta = np.pi/2 #<- CHANGE THIS TO VIEW A SLIGHTLY DIFFERENT PLANE
         x_s = []
         y_s = []
@@ -86,7 +57,6 @@ class AlfvenVel:
         Vas = []
         for i in range(len(y_s)):
             print('new row, {} to go'.format(len(y_s)-i))
-            z = 0
             Vas_row = [] 
             for j in range(len(x_s)):
                 r = np.sqrt((x_s[j])**2 + (y_s[i])**2)
@@ -101,18 +71,13 @@ class AlfvenVel:
                 B_r, B_theta, B_phi = self.field.Internal_Field(r, theta, phi, model=self.model) #calculates the magnetic field due to the internal field in spherical polar that point)
                 B_current = self.field.CAN_sheet(r, theta, phi) #calculates the magnetic field due to the current sheet in spherical polar
                 B_notcurrent = np.array([B_r, B_theta, B_phi]) 
-                #print(B_notcurrent)
-                #print(B_current)
                 B_overall = np.add(B_current, B_notcurrent) #adds up the total magnetic field 
                 B_x, B_y, B_z = self.help.Bsph_to_Bcart(B_overall[0], B_overall[1], B_overall[2], r, theta, phi)
                 B = np.array([B_x, B_y, B_z])
-                #print(B_notcurrent)
-                #print(B)
-                #B =  B/(10**4) <- is chris' code outputting a Gauss or a Tesla value? 
+                B =  B/(10**9)  #chris's code is in nT
                 va = self.calculator(B, n)
                 Vas_row.append(va)
-                if np.isclose(r, 6):
-                    print('b = {}, n = {}, va = {}, magb = {}'.format(B, n, va, np.linalg.norm(B)))
+
 
             Vas.append(Vas_row)
         Vas_km = np.array(Vas)/(1000)
@@ -130,6 +95,79 @@ class AlfvenVel:
         ax.set_aspect('equal', adjustable = 'box')
         plt.savefig('images/va_topdown.png')
         plt.show() 
+
+    def topdown_seperate_equators(self, spin_eq = 'on',):
+        '''
+        top down view from the spin equator - could be extended to do magnetic field eq too later on. 
+        just takes into account the difference in density that will arise due to the different centrifugal equator
+        '''
+        if spin_eq == 'on':
+            self.spin_eq_topdown()
+    
+    def spin_eq_topdown(self):
+        '''  
+        does the actual stuff for the topdown centrifugal equators thing
+        '''
+        theta = np.pi/2 #<- CHANGE THIS TO VIEW A SLIGHTLY DIFFERENT PLANE
+        x_s = []
+        y_s = []
+        spacing = self.stop/self.numpoints
+        for i in range(self.numpoints):
+            x_s.append(i * spacing)
+            y_s.append(i* spacing)
+            x_s.append(-i * spacing)
+            y_s.append(-i* spacing)
+        x_s.sort()
+        y_s.sort()
+        n_0s = []
+        #print(x_s, y_s)
+
+        Vas = []
+        for i in range(len(y_s)):
+            print('new row, {} to go'.format(len(y_s)-i))
+            Vas_row = [] 
+            for j in range(len(x_s)):
+                r = np.sqrt((x_s[j])**2 + (y_s[i])**2)
+                phi = np.arctan2(y_s[i],x_s[j])
+                HeightAboveCent = self.help.height_centrifugal_equator(r, phi)
+                scaleheight = self.densityfunctions.scaleheight(r)
+
+                
+                #print(r)
+                if r <6:
+                    va = 1 *10 ** 2
+                    Vas_row.append(va)
+                    continue
+                n_0 = self.radialfunctions.radial_density(abs(r))
+                n = self.densityfunctions.density(n_0, HeightAboveCent, scaleheight)
+                
+                B_r, B_theta, B_phi = self.field.Internal_Field(r, theta, phi, model=self.model) #calculates the magnetic field due to the internal field in spherical polar that point)
+                B_current = self.field.CAN_sheet(r, theta, phi) #calculates the magnetic field due to the current sheet in spherical polar
+                B_notcurrent = np.array([B_r, B_theta, B_phi]) 
+                B_overall = np.add(B_current, B_notcurrent) #adds up the total magnetic field 
+                B_x, B_y, B_z = self.help.Bsph_to_Bcart(B_overall[0], B_overall[1], B_overall[2], r, theta, phi)
+                B = np.array([B_x, B_y, B_z])
+                B = B/(10**9) #CHRIS code outputs nT
+                va = self.calculator(B, n)
+                Vas_row.append(va)
+
+            Vas.append(Vas_row)
+        Vas_km = np.array(Vas)/(1000)
+
+        fig, ax = plt.subplots()
+        cont = ax.contourf(self.gridx, self.gridy, Vas_km, cmap = 'bone')#, locator=ticker.LogLocator())
+        ax.add_patch(Circle((0,0), 1, color='y', zorder=100, label = "Jupiter"))
+        ax.add_patch(Circle((0,0), 6, color='c', zorder=90, label = "Io Orbital Radius"))
+        ax.legend()
+        ax.set_xlim(-30,30)
+        ax.set_ylim(-30,30)
+        degrees = theta * 180 /np.pi
+        ax.set(xlabel = 'x $R_J$ \n CML is vertically upwards', ylabel = 'y $R_J$', title = 'alfven velocity in the spin plane, taking centrifugal equator into account')
+        fig.colorbar(cont, label = '$V_a km$')
+        ax.set_aspect('equal', adjustable = 'box')
+        plt.savefig('images/va_topdown_inc_cent.png')
+        plt.show() 
+ 
 
     def calc_3d(self, r):
         spacing = 2 * np.pi / self.numpoints
@@ -194,7 +232,7 @@ class AlfvenVel:
 
 
 test = AlfvenVel(numpoints=200)
-test.top_down()
+test.topdown_seperate_equators()
 
                 
 
