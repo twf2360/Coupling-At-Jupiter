@@ -7,6 +7,8 @@ Created on Sat Apr 13 09:47:40 2019
 
 import numpy as np
 import math
+import scipy
+import scipy.special
 
 
 class field_models(object):
@@ -225,7 +227,7 @@ class field_models(object):
 		        dipole
                 
                 
-        OUTPUT:
+        OUTPUT: (in nT)
             Brint - the radial component of the internal field
             Btint - the theta component of the internal field
             Bpint - the azimuthal component of the internal field

@@ -23,6 +23,7 @@ class DensityHeight:
         self.start = start
         self.stop = stop 
         self.tracing = InternalAndCS()
+    
     def scaleheight(self, R):
         a1 = -0.116
         a2 = 2.14
@@ -86,7 +87,10 @@ class DensityHeight:
             plt.xlim(0, 100)
             plt.show()
     
-    def equators(self):
+    def equators_line(self):
+        '''
+        this does technically plot the equators, but the centrifugal equator as plotted as a straight line, which it just isn't. 
+        '''
         r = 30
         theta = np.pi/2
         phi_LH =  21* np.pi/180
@@ -125,6 +129,42 @@ class DensityHeight:
         plt.legend()
         plt.show()
 
+    def equators_cent_calculated(self):
+        r = 30
+        theta = np.pi/2
+        phi_LH =  21* np.pi/180
+        phi_rh = 2 *np.pi - phi_LH
+        Btheta_eq = self.tracing.find_mag_equator(point=[r*Rj, theta,phi_LH])
+        b_eq = np.array([[-r * np.sin(Btheta_eq), - r * np.cos(Btheta_eq)], [r * np.sin(Btheta_eq),  r * np.cos(Btheta_eq)]])
+        spin_eq = np.array([[-r,0],[r,0]])
+        b_eq_t = np.transpose(b_eq)
+        spin_eq_t = np.transpose(spin_eq)
+
+        numpoints = 100
+        centrifugal_equator = []
+        cent_points = np.linspace(-r, r, num=numpoints)
+        for x_point in cent_points:
+            H = self.help.height_centrifugal_equator(x_point, phi_rh)
+            centrifugal_equator.append([x_point, H])
+        centrifugal_eq_t = np.transpose(np.array(centrifugal_equator))
+
+
+        
+        fig, ax = plt.subplots()
+        
+        ax.plot(centrifugal_eq_t[0] , centrifugal_eq_t[1], color = 'c', label = 'Centrifugal Equator')
+        ax.plot(spin_eq_t[0], spin_eq_t[1], color = 'm', label = 'Spin Equator')
+        ax.plot(b_eq_t[0], b_eq_t[1], color = 'k', label = 'Magnetic Field Equator')
+
+        ax.add_patch(Circle((0,0), 1, color='y', zorder=100, label = "Jupiter"))
+        phi_lh_deg = phi_LH * 180/np.pi 
+        ax.set(xlim = (-30,30), ylim = (-5,5), xlabel = 'X $R_J$ \n CML is phi = 0', ylabel = 'Y $R_J$', title = 'Different Equators at Jupiter, SYSIII longitude =   {:.0f}{} on RHS'.format(phi_lh_deg,  u"\N{DEGREE SIGN}"))
+        ax.set_aspect(aspect='equal')
+        plt.legend()
+        plt.savefig('images/equators.png')
+        plt.show()
+
+
     
         
 
@@ -136,5 +176,7 @@ class DensityHeight:
 
 '''
 test = DensityHeight(numpoints= 100, start= 5, stop = 20)
-test.plotting(scale_height='on', density = 'on')    
+#test.plotting(scale_height='on', density = 'on')    
+test.equators_cent_calculated()
+
 '''
