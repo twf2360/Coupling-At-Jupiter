@@ -130,7 +130,9 @@ class AlfvenVel:
                 r = np.sqrt((x_s[j])**2 + (y_s[i])**2)
                 phi = np.arctan2(y_s[i],x_s[j])
                 HeightAboveCent = self.help.height_centrifugal_equator(r, phi)
-                scaleheight = self.densityfunctions.scaleheight(r)
+                r_cent = self.help.length_centrifual_equator(r, phi)
+                scaleheight = self.densityfunctions.scaleheight(r_cent)
+                
 
                 
                 #print(r)
@@ -138,7 +140,7 @@ class AlfvenVel:
                     va = 1 *10 ** 2
                     Vas_row.append(va)
                     continue
-                n_0 = self.radialfunctions.radial_density(abs(r))
+                n_0 = self.radialfunctions.radial_density(abs(r_cent))
                 n = self.densityfunctions.density(n_0, HeightAboveCent, scaleheight)
                 
                 B_r, B_theta, B_phi = self.field.Internal_Field(r, theta, phi, model=self.model) #calculates the magnetic field due to the internal field in spherical polar that point)
