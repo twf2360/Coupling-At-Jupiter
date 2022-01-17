@@ -169,7 +169,72 @@ class AlfvenVel:
         ax.set_aspect('equal', adjustable = 'box')
         plt.savefig('images/va_topdown_inc_cent.png')
         plt.show() 
- 
+
+    def sideview_seperate_equators(self):
+        ''' 
+        Plots the alfven velocity for a side on view 
+        ''' 
+        phi = 0 
+        y_s = []
+        z_s = []
+        spacing = self.stop/self.numpoints
+        for i in range(self.numpoints):
+            y_s.append(i * spacing)
+            z_s.append(i* spacing)
+            y_s.append(-i * spacing)
+            z_s.append(-i* spacing)
+        y_s.sort()
+        z_s.sort()
+    
+        n_0s = []
+        Vas = []
+
+        for i in range(len(z_s)):
+            print('new row, {} to go'.format(len(z_s)-i))
+            Vas_row = [] 
+            for j in range(len(y_s)):
+                r = np.sqrt((y_s[j])**2 + (z_s[i])**2)
+                theta = np.arctan2(y, z)
+                HeightAboveCent = self.help.height_centrifugal_equator(r, phi)
+                r_cent = self.help.length_centrifual_equator(r, phi)
+                scaleheight = self.densityfunctions.scaleheight(r_cent)
+                
+
+                
+                #print(r)
+                if r <6:
+                    va = 1 *10 ** 2
+                    Vas_row.append(va)
+                    continue
+                n_0 = self.radialfunctions.radial_density(abs(r_cent))
+                n = self.densityfunctions.density(n_0, HeightAboveCent, scaleheight)
+                
+                B_r, B_theta, B_phi = self.field.Internal_Field(r, theta, phi, model=self.model) #calculates the magnetic field due to the internal field in spherical polar that point)
+                B_current = self.field.CAN_sheet(r, theta, phi) #calculates the magnetic field due to the current sheet in spherical polar
+                B_notcurrent = np.array([B_r, B_theta, B_phi]) 
+                B_overall = np.add(B_current, B_notcurrent) #adds up the total magnetic field 
+                B_x, B_y, B_z = self.help.Bsph_to_Bcart(B_overall[0], B_overall[1], B_overall[2], r, theta, phi)
+                B = np.array([B_x, B_y, B_z])
+                B = B/(10**9) #CHRIS code outputs nT
+                va = self.calculator(B, n)
+                Vas_row.append(va)
+
+            Vas.append(Vas_row)
+        Vas_km = np.array(Vas)/(1000)
+
+        fig, ax = plt.subplots()
+        cont = ax.contourf(self.gridx, self.gridy, Vas_km, cmap = 'bone')#, locator=ticker.LogLocator())
+        ax.add_patch(Circle((0,0), 1, color='y', zorder=100, label = "Jupiter"))
+        ax.add_patch(Circle((0,0), 6, color='c', zorder=90, label = "Io Orbital Radius"))
+        ax.legend()
+        ax.set_xlim(-30,30)
+        ax.set_ylim(-30,30)
+        ax.set(xlabel = 'y $R_J$ \n CML is out of screen', ylabel = 'z $R_J$', title = 'alfven velocity in the plane perpendicular to CML, taking centrifugal equator into account')
+        fig.colorbar(cont, label = '$V_a km$')
+        ax.set_aspect('equal', adjustable = 'box')
+        plt.savefig('images/va_side_inc_cent.png')
+        plt.show() 
+
 
     def calc_3d(self, r):
         spacing = 2 * np.pi / self.numpoints
@@ -228,6 +293,10 @@ class AlfvenVel:
         plt.show()
     
         
+    def travel(self, startpoint):
+        '''
+        Calculate the travel path/time of an alfven wave from a given startpoint to the ionosphere. 
+        ''' 
 
 
             
