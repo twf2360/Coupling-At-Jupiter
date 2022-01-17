@@ -34,6 +34,9 @@ class radialOutflow:
     
     '''
     def __init__(self,avgIonMass):
+        ''' 
+        input average ion mass in amu
+        '''
         self.avgIonMass = avgIonMass * 1.67 * 10**-27
 
 
@@ -41,8 +44,8 @@ class radialOutflow:
         ''' 
         inputs:
         r = radial distance in rj
-        mdot = mass loading rate 
-        m = average ion mass
+        mdot = mass loading rate in kg/s
+        
 
         returns radial flow velocity at point r. 
         '''
@@ -60,7 +63,8 @@ class radialOutflow:
 
     def radial_density(self, r):
         '''
-        r in rj
+        Calculates the density at a given radius r (in rj) along the centrifugal equator 
+        returns n in m^-3
         '''
         n = (3.2e8 * r**(-6.9) + 9.9*r**(-1.28)) * 1e6 #think it should be R
         return n
@@ -115,9 +119,9 @@ class radialOutflow:
         help = HelpfulFunctions()
         ''' 
         inputs:
-        r = radial distance from planet 
+        r = radial distance from planet in rj
 
-        returns alfven velocity at point r 
+        returns alfven velocity in m/s at point r 
         '''
         magB = B0 * (1/r)**3
         n = self.radial_density(r)
