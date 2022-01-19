@@ -107,6 +107,12 @@ class HelpfulFunctions():
 
         return centrifualEq 
 
+    
+    '''
+    #################################### NOTE ######################################
+    THE TWO BELOW FUNCTIONS SHOULDN'T BE USED - i don't think they are effective, however i am loathe to delete them jic
+    '''
+    
     def height_centrifugal_equator(self, r, phi):
         ''' 
         Input the r, phi coordinates of a point on the spin equator of Jupiter
@@ -125,6 +131,7 @@ class HelpfulFunctions():
         latitude = self.centrifugal_equator(r, phi)
         d = r * np.cos(latitude)
         return d
+
 
         
 

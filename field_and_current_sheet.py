@@ -63,13 +63,14 @@ class InternalAndCS:
             self.starting_cordinates = starting_cordinates
 
     
-    def trace_magnetic_field(self, printing = 'off', starting_cordinates = None):
+    def trace_magnetic_field(self, printing = 'off', starting_cordinates = None, one_way = 'off'):
         if starting_cordinates == None:
             starting_cordinates = self.starting_cordinates
         coordinates = starting_cordinates
         coordinates[2] = 2*np.pi - coordinates[2] #changing from LH input to RH
         points = [] #this is the list that will eventually be plotted
         Br_list = []
+        B_list = []
         i = 0
         direction = 1
         while True:
@@ -78,6 +79,8 @@ class InternalAndCS:
             '''
             r = coordinates[0]
             if r <= 3 * Rj: #defines when the loop is broken out of 
+                if one_way == 'on':
+                    break
                 if direction == 1:
                     direction = -1
                     coordinates = starting_cordinates
@@ -101,6 +104,7 @@ class InternalAndCS:
             Br_list.append(B_overall[0])
             B_x, B_y, B_z = self.help.Bsph_to_Bcart(B_overall[0], B_overall[1], B_overall[2], coordinates[0], coordinates[1],coordinates[2]) #converts magnetic field to cartesian
             B = np.array([B_x, B_y, B_z])
+            B_list.append(B)
             #print(B)
             coordinates = [px,py,pz] #change the definition of the coordinates from spherical to cartesian 
             Bunit = self.help.unit_vector_cart(B) #calculates the unit vector in cartesian direction
@@ -118,7 +122,7 @@ class InternalAndCS:
                     print(' x= {}, y = {}, z =  {}'.format(px,py,pz))
                     print('bunit = {}, change = {}, dr = {} \n \n'.format(Bunit, change, dr))
  
-        return points, Br_list
+        return points, Br_list, B_list
 
 
 
