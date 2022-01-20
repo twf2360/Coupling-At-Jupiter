@@ -164,19 +164,113 @@ class DensityHeight:
         plt.savefig('images/equators.png')
         plt.show()
 
+    def meridian_slice(self, phi_lh):
+        ''' 
+        plots a slice of the density at a certain longitude given by phi_lh (in degrees)
+        '''
+        phi_rh = 2*np.pi - (phi_lh * np.pi/180)
+        densities = []
+        grids, gridz = self.help.makegrid_2d_negatives(200 ,gridsize= self.stop)
 
-    
+        r_cent_points = np.linspace(-30, 30, num=200)
+        cent_plot_points = []
+        for point in r_cent_points:
+            if point < 0:
+                phi = phi_rh + np.pi 
+                direction = -1
+            else: 
+                phi = phi_rh
+                direction = 1
+            r_cent, theta_cent, phi_cent = self.help.change_equators(point, np.pi/2, phi)
+            #x_cent, y_cent, z_cent = self.help.sph_to_cart(abs(r_cent), theta_cent, phi_cent)
+            #print(theta_cent, z_cent)
+            z_cent = point * np.cos(theta_cent)
+            cent_plot_points.append([point, z_cent]) #np.sqrt(x_cent**2 +  y_cent**2)
+        cent_plot_points = np.array(cent_plot_points)
+        cent_plot_points_t = np.transpose(cent_plot_points)
+
+        
+        #print(len(gridy))
+        for i in range(len(gridz)):
+            print('new row, {} to go'.format(len(gridz)-i))
+            
+            density_row = []
+            for j in range(len(grids)):
+                z = gridz[i][j]
+                s = grids[i][j]
+                if s < 0: 
+                    phi = phi_rh + np.pi
+                    #print('general kenobi')
+                else:
+                    phi = phi_rh
+                #print(z,s)
+                r = np.sqrt(z**2 + s**2)
+                if r < 6:
+                    n = 0
+                    ''' obviously this will have to change at somepoint '''
+                    density_row.append(n)
+                    continue
+                theta = np.arctan2(s,z)
+                #print(s, z, theta, phi)
+                n = self.density_sep_equators(r, theta, phi)
+                #print(n)
+                density_row.append(n)
+            densities.append(density_row)
+            #print(density_row)
+        
+        densities_cm = np.array(densities)/1e6
+        #print(densities_cm.shape)
+        fig, ax = plt.subplots(figsize = (25,16))
+        cont = ax.contourf(grids, gridz, densities_cm, cmap = 'bone', locator=ticker.LogLocator())
+        ax.add_patch(Circle((0,0), 1, color='y', zorder=100, label = "Jupiter"))
+        ax.add_patch(Circle((0,0), 6, color='c', zorder=90, label = "Io Orbital Radius"))
+        ax.text(0.95, 0.01, 'Sys 3 (lh) phi = {} '.format(phi_lh),
+        verticalalignment='bottom', horizontalalignment='right',
+        transform=ax.transAxes,
+        color='k', fontsize=15)
+        ax.set_xlim(-30,30)
+        ax.set_ylim(-15,15)
+        ax.set(xlabel = 'x $R_J$ \n', ylabel = 'z $R_J$', title = 'Meridian Slice')
+        ax.plot(cent_plot_points_t[0], cent_plot_points_t[1], label = 'Centrifugal Equator')
+        fig.colorbar(cont, label = 'Density $(cm^-3)$')
+        ax.set_aspect('equal', adjustable = 'box')
+        ax.legend()
+        plt.savefig('images/Meridian slice.png')
+        plt.show() 
         
 
 
-    
+                
+                 
+
+
+    def density_sep_equators(self, r, theta, phi):
+        r_cent = r 
+        phi_cent = phi
+        theta_shift = self.help.centrifugal_equator(r, phi)
+        theta_cent = theta + theta_shift
+        #if theta_shift < 0:
+         #   print('hello there')
+        #print('theta shift = {} \n theta cent = {}'.format(theta_shift, theta_cent))
+        
+        scaleheight = self.scaleheight(r_cent)
+        n_0 = self.radialOutflowFunctions.radial_density(r_cent)
+        z_cent =  r_cent * np.cos(theta_cent)
+        #print(x_cent, y_cent, z_cent)
+        n = self.density(n_0, abs(z_cent), scaleheight)
+        #print(n_0, n, scaleheight)
+        return n 
 
 
     
+
 
 '''
-test = DensityHeight(numpoints= 100, start= 5, stop = 20)
-#test.plotting(scale_height='on', density = 'on')    
-test.equators_cent_calculated()
 
+
+test = DensityHeight(numpoints= 100, start= 5, stop = 30)
+#test.plotting(scale_height='on', density = 'on')    
+#test.equators_cent_calculated()
+#test.density_sep_equators(30, np.pi/2, 360*np.pi/180)
+test.meridian_slice(339)
 '''

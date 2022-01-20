@@ -63,7 +63,7 @@ class InternalAndCS:
             self.starting_cordinates = starting_cordinates
 
     
-    def trace_magnetic_field(self, printing = 'off', starting_cordinates = None, one_way = 'off'):
+    def trace_magnetic_field(self, printing = 'off', starting_cordinates = None, one_way = 'off', break_point = 3):
         if starting_cordinates == None:
             starting_cordinates = self.starting_cordinates
         coordinates = starting_cordinates
@@ -78,7 +78,7 @@ class InternalAndCS:
             loops for as long as r is larger than a defined value
             '''
             r = coordinates[0]
-            if r <= 3 * Rj: #defines when the loop is broken out of 
+            if r <= break_point * Rj: #defines when the loop is broken out of 
                 if one_way == 'on':
                     break
                 if direction == 1:

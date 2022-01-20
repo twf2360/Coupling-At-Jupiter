@@ -71,7 +71,7 @@ class field_models(object):
             
         OUTPUT:
             B - array containing the B field components in a spherical system III 
-                reference frame.
+                reference frame. (in nT)
         
         '''
         
