@@ -339,9 +339,9 @@ class AlfvenVel:
         input startpoint [r, theta, phi] where r is in rj and phi is left handed
         ''' 
         startpoint[0] = startpoint[0]*Rj
-        plot_results = self.plotter.trace_magnetic_field(starting_cordinates=startpoint, one_way='on')
+        plot_results = self.plotter.trace_magnetic_field(starting_cordinates=startpoint, one_way='on', break_point=2)
         points = np.array(plot_results[0])
-        Bs = np.array(plot_results[2]) /10e9
+        Bs = np.array(plot_results[2]) /10e9 # turn nano tesla into T
         ''' 
         this returns the path taken (in terms of point by point) taken by the alfven wave (points)
         and the magnetic field at each points (Bs)
@@ -361,7 +361,7 @@ class AlfvenVel:
             averageB = (magB_end + magB_start)/2
 
             ''' 
-            - this part is probably worth checking with Licia/someone
+            - this part is probably worth checking with Licia/someone (espicially as it keeps returning a time that is too small)
             - approximates the alfven velocity by calculating B as halfway between B_start  and B_end 
                 and by calculating n half way between the two points
             - will also have to add in the approximate function for n inside of Io radius
@@ -381,25 +381,29 @@ class AlfvenVel:
             '''  
             -later plan to improve this to a proper relativistic correction
             ''' 
-            if va > 3e8:
-                va=0.9 * 3e8
-            traveltime = distance/va
+            va_corrected = self.relativistic_correction(va)
+            traveltime = distance/va_corrected
             time += traveltime
         print('travel time = {:.2f}s (= {:.1f}mins)'.format(time, time/60))
         return time
 
 
-            
-        
-
+    def relativistic_correction(self, va):
+        ''' 
+        Input va
+        return corrected va 
+        equation taken from https://www.aanda.org/articles/aa/pdf/2012/06/aa18630-11.pdf eq 2. 
+        '''
+        corrected_va = (va * 3e8)/np.sqrt(va**2 + 3e8**2)
+        return corrected_va
 
             
 
 
 test = AlfvenVel(numpoints=200)
 #test.top_down_matched_equators()
-test.topdown_seperate_equators(density = 'on')
-test.travel_time([30, np.pi/2, 212* np.pi/180])
+#test.topdown_seperate_equators(density = 'on')
+test.travel_time([50, np.pi/2, 212* np.pi/180])
 
                 
 

@@ -104,8 +104,29 @@ class HelpfulFunctions():
         d = 7.76 * np.pi /180
         e = 249 * np.pi/180
         centrifualEq = (a * np.tanh(b*r -c)+ d) * np.sin(phiLH - e)
+        
 
         return centrifualEq 
+
+    def change_equators(self, r, theta, phi):
+        r_cent = r 
+        phi_cent = phi
+        theta_shift = self.centrifugal_equator(r, phi)
+        theta_cent = theta + theta_shift
+        return r, theta_cent, phi_cent
+        
+    def change_equators_cart_output(self, r, theta, phi):
+        r_cent = r 
+        phi_cent = phi
+        theta_shift = self.centrifugal_equator(r, phi)
+        theta_cent = theta + theta_shift
+        #if theta_shift < 0:
+         #   print('hello there')
+        #print('theta shift = {} \n theta cent = {}'.format(theta_shift, theta_cent))
+        
+        scaleheight = self.scaleheight(r_cent)
+        x_cent, y_cent, z_cent = self.sph_to_cart(r_cent, theta_cent, phi_cent)
+        return x_cent, y_cent, z_cent
 
     
     '''
