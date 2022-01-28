@@ -30,9 +30,9 @@ class DensityHeight:
         a3 = -2.05
         a4 = 0.491
         a5 = 0.126
-        r = np.log10(R/6) #<-- this is what we need to check 
+        r = np.log10(R/6) 
         h = a1 + a2 * r + a3 * r**2 + a4 * r**3 + a5 * r**5
-        H = 10**h #<--- this too 
+        H = 10**h # Don't worry about the runtime warning - H get's really big for Large R values :D 
         return H
 
     def density(self, n_0, z, H):
@@ -55,7 +55,6 @@ class DensityHeight:
                     n = self.density(n_0, z, H)
                     n_row.append(n)
                 ns.append(n_row)
-            #print(ns)
             
             density_0_cm = np.array(n_0s)/ (10**6)
             density_cm = np.array(ns)/(10**6)
@@ -70,10 +69,10 @@ class DensityHeight:
             ax1.plot(radii, density_0_cm, label = '$n_0$')
             ax1.legend()
             
-            ax1.set(xlabel='Radius (RJ)', ylabel='Density ($cm^{-3}$)', title='Density Vs Radial Distsance at height = 0')
+            ax1.set(xlabel='Radius $(R_J)$', ylabel='Density ($(cm^{-3})$)', title='Density Vs Radial Distsance along Centrifugal Equator')
             ax1.yaxis.set_ticks_position('both')
             ax1.set_yscale("log")
-            plt.suptitle('Density Variations as a function of height and radial distance ')
+            plt.suptitle('Density Variations as a function of height and radial distance')
             #fig.tight_layout()
             plt.show()
         
@@ -99,14 +98,6 @@ class DensityHeight:
 
         centrifugaleq_theta_lat = self.help.centrifugal_equator(r, phi_rh)# +np.pi)
         print(Btheta_eq, centrifugaleq_theta_lat)
-        '''
-        centrifugaleq_theta = np.pi/2 - centrifugaleq_theta_lat
-        if centrifugaleq_theta > np.pi/2:
-            diff = centrifugaleq_theta - np.pi/2
-            centrifugaleq_theta -= 2*diff
-        '''
-        #print(centrifugaleq_theta, Btheta_eq)
-        #print(centrifugaleq_LH_above_spin, centrifugaleq_RH_above_spin)
 
         centrifual_eq = np.array([[-r * np.cos(centrifugaleq_theta_lat), - r * np.sin(centrifugaleq_theta_lat)], [r * np.cos(centrifugaleq_theta_lat),  r * np.sin(centrifugaleq_theta_lat)]])
         b_eq = np.array([[-r * np.sin(Btheta_eq), - r * np.cos(Btheta_eq)], [r * np.sin(Btheta_eq),  r * np.cos(Btheta_eq)]])
@@ -158,39 +149,39 @@ class DensityHeight:
 
         ax.add_patch(Circle((0,0), 1, color='y', zorder=100, label = "Jupiter"))
         phi_lh_deg = phi_LH * 180/np.pi 
-        ax.set(xlim = (-30,30), ylim = (-5,5), xlabel = 'X $R_J$ \n CML is phi = 0', ylabel = 'Y $R_J$', title = 'Different Equators at Jupiter, SYSIII longitude =   {:.0f}{} on RHS'.format(phi_lh_deg,  u"\N{DEGREE SIGN}"))
+        ax.set(xlim = (-30,30), ylim = (-5,5), xlabel = 'X $R_J$ \n CML is phi = 0', ylabel = 'Y $R_J$',
+         title = 'Different Equators at Jupiter, SYSIII longitude =   {:.0f}{} on RHS'.format(phi_lh_deg,  u"\N{DEGREE SIGN}"))
         ax.set_aspect(aspect='equal')
         plt.legend()
         plt.savefig('images/equators.png')
         plt.show()
 
-    def meridian_slice(self, phi_lh):
+    def meridian_slice(self, phi_lh, lines = 'off'):
         ''' 
         plots a slice of the density at a certain longitude given by phi_lh (in degrees)
         '''
         phi_rh = 2*np.pi - (phi_lh * np.pi/180)
+        print(phi_rh)
         densities = []
         grids, gridz = self.help.makegrid_2d_negatives(200 ,gridsize= self.stop)
 
         r_cent_points = np.linspace(-30, 30, num=200)
         cent_plot_points = []
         for point in r_cent_points:
-            if point < 0:
+            if point > 0:
                 phi = phi_rh + np.pi 
-                direction = -1
             else: 
                 phi = phi_rh
-                direction = 1
-            r_cent, theta_cent, phi_cent = self.help.change_equators(point, np.pi/2, phi)
-            #x_cent, y_cent, z_cent = self.help.sph_to_cart(abs(r_cent), theta_cent, phi_cent)
-            #print(theta_cent, z_cent)
-            z_cent = point * np.cos(theta_cent)
-            cent_plot_points.append([point, z_cent]) #np.sqrt(x_cent**2 +  y_cent**2)
-        cent_plot_points = np.array(cent_plot_points)
-        cent_plot_points_t = np.transpose(cent_plot_points)
 
+
+            r_cent, theta_cent, phi_cent = self.help.change_equators(point, np.pi/2, phi)
+            z_cent = abs(point) * np.cos(theta_cent)
+
+            cent_plot_points.append([point, z_cent]) 
+        cent_plot_points = np.array(cent_plot_points)
+
+        cent_plot_points_t = np.transpose(cent_plot_points)
         
-        #print(len(gridy))
         for i in range(len(gridz)):
             print('new row, {} to go'.format(len(gridz)-i))
             
@@ -198,44 +189,42 @@ class DensityHeight:
             for j in range(len(grids)):
                 z = gridz[i][j]
                 s = grids[i][j]
-                if s < 0: 
-                    phi = phi_rh + np.pi
-                    #print('general kenobi')
-                else:
-                    phi = phi_rh
-                #print(z,s)
                 r = np.sqrt(z**2 + s**2)
+                phi = phi_rh 
+
                 if r < 6:
-                    n = 0
+                    n = 1e6
                     ''' obviously this will have to change at somepoint '''
                     density_row.append(n)
                     continue
                 theta = np.arctan2(s,z)
-                #print(s, z, theta, phi)
                 n = self.density_sep_equators(r, theta, phi)
-                #print(n)
                 density_row.append(n)
             densities.append(density_row)
-            #print(density_row)
         
         densities_cm = np.array(densities)/1e6
-        #print(densities_cm.shape)
+        densities_cm_edits = np.clip(densities_cm, 1e-2, 1e10)
         fig, ax = plt.subplots(figsize = (25,16))
-        cont = ax.contourf(grids, gridz, densities_cm, cmap = 'bone', locator=ticker.LogLocator())
+        cont = ax.contourf(grids, gridz, densities_cm_edits, cmap = 'bone', locator=ticker.LogLocator())
         ax.add_patch(Circle((0,0), 1, color='y', zorder=100, label = "Jupiter"))
         ax.add_patch(Circle((0,0), 6, color='c', zorder=90, label = "Io Orbital Radius"))
-        ax.text(0.95, 0.01, 'Sys 3 (lh) phi = {} '.format(phi_lh),
+        ax.text(0.95, 0.01, 'SYS III (LH) Longitutude = {}{} '.format(phi_lh, u"\N{DEGREE SIGN}"),
         verticalalignment='bottom', horizontalalignment='right',
         transform=ax.transAxes,
-        color='k', fontsize=15)
+        color='w', fontsize=15)
+        ax.text(0.05, 0.99, 'SYS III (LH) Longitutude = {}{} '.format(phi_lh + 180, u"\N{DEGREE SIGN}"),
+        verticalalignment='top', horizontalalignment='left',
+        transform=ax.transAxes,
+        color='w', fontsize=15)
         ax.set_xlim(-30,30)
         ax.set_ylim(-15,15)
-        ax.set(xlabel = 'x $R_J$ \n', ylabel = 'z $R_J$', title = 'Meridian Slice')
-        ax.plot(cent_plot_points_t[0], cent_plot_points_t[1], label = 'Centrifugal Equator')
+        ax.set(xlabel = '$R_J$ \n', ylabel = '$R_J$', title = 'Density Contour Plot for Given longitude')
+        if lines == 'on':
+            ax.plot(cent_plot_points_t[0], cent_plot_points_t[1], label = 'Centrifugal Equator')
         fig.colorbar(cont, label = 'Density $(cm^-3)$')
         ax.set_aspect('equal', adjustable = 'box')
         ax.legend()
-        plt.savefig('images/Meridian slice.png')
+        plt.savefig('images-24-jan-update/density longitude slice.png')
         plt.show() 
         
 
@@ -245,32 +234,31 @@ class DensityHeight:
 
 
     def density_sep_equators(self, r, theta, phi):
+        ''' 
+        Input r, theta (colatitude), phi (rh), in right handed sysII co-ordiantes
+        returns mass density, taking into account the difference between spin and centrifugal equators. 
+        '''
         r_cent = r 
         phi_cent = phi
         theta_shift = self.help.centrifugal_equator(r, phi)
         theta_cent = theta + theta_shift
-        #if theta_shift < 0:
-         #   print('hello there')
-        #print('theta shift = {} \n theta cent = {}'.format(theta_shift, theta_cent))
-        
         scaleheight = self.scaleheight(r_cent)
         n_0 = self.radialOutflowFunctions.radial_density(r_cent)
         z_cent =  r_cent * np.cos(theta_cent)
-        #print(x_cent, y_cent, z_cent)
         n = self.density(n_0, abs(z_cent), scaleheight)
-        #print(n_0, n, scaleheight)
+
         return n 
 
 
     
 
 
-'''
 
+'''
 
 test = DensityHeight(numpoints= 100, start= 5, stop = 30)
 #test.plotting(scale_height='on', density = 'on')    
 #test.equators_cent_calculated()
 #test.density_sep_equators(30, np.pi/2, 360*np.pi/180)
-test.meridian_slice(339)
+test.meridian_slice(159)
 '''
