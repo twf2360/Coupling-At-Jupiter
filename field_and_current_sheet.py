@@ -63,7 +63,7 @@ class InternalAndCS:
             self.starting_cordinates = starting_cordinates
 
     
-    def trace_magnetic_field(self, printing = 'off', starting_cordinates = None, one_way = 'off', break_point = 3):
+    def trace_magnetic_field(self, printing = 'off', starting_cordinates = None, one_way = 'off', break_point = 3, step = 0.001, pathing = 'forward'):
         if starting_cordinates == None:
             starting_cordinates = self.starting_cordinates
         coordinates = starting_cordinates
@@ -73,6 +73,10 @@ class InternalAndCS:
         B_list = []
         i = 0
         direction = 1
+        if pathing == 'backward':
+            path_direction = -1
+        else:
+            path_direction = 1
         while True:
             ''' 
             loops for as long as r is larger than a defined value
@@ -108,8 +112,8 @@ class InternalAndCS:
             #print(B)
             coordinates = [px,py,pz] #change the definition of the coordinates from spherical to cartesian 
             Bunit = self.help.unit_vector_cart(B) #calculates the unit vector in cartesian direction
-            dr = r * 0.001  #THIS IS HOW WE UPPDATE THE COORDINATES - IF IT TAKES TOO LONG, THIS NEEDS CHANGING IF IT TAKES TOO LONG OR IS GETTING WEIRD CLOSE TO PLANET
-            change = dr * Bunit * direction #the change from this coordinate to the next one is calculated
+            dr = r * step  #THIS IS HOW WE UPPDATE THE COORDINATES - IF IT TAKES TOO LONG, THIS NEEDS CHANGING IF IT TAKES TOO LONG OR IS GETTING WEIRD CLOSE TO PLANET
+            change = dr * Bunit * direction * path_direction#the change from this coordinate to the next one is calculated
             coordinates = np.add(coordinates, change) #add the change to the current co ordinate
             pr, ptheta, pphi = self.help.cart_to_sph(coordinates[0], coordinates[1], coordinates[2]) #change the coordinatres back in spherical
             coordinates = [pr,ptheta,pphi] 
@@ -304,10 +308,10 @@ class InternalAndCS:
         return None
 
 
-'''    
+'''
 test = InternalAndCS([30*Rj, np.pi/2, 212* np.pi/180], model = 'VIP4')
 #test.find_mag_equator(point=[30*Rj, np.pi/2, 112* np.pi/180])
 #test.plotTrace()
 #test.plotMultipleLines()
-test.traceFieldEquator()
+#test.traceFieldEquator()
 '''

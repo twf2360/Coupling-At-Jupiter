@@ -78,13 +78,13 @@ class radialOutflow:
         
         
         if show == 'on':
-            fig, ax = plt.subplots()
-            ax.plot(radii, densities, label = 'density')
+            fig, ax = plt.subplots(figsize = (8,5))
+            ax.plot(radii, densities, label = 'Density $(m^{-3})$')
             ax.legend()
-            ax.set(xlabel='Radius (RJ)', ylabel='Density ($m^3$)', title='Density Vs Radial Distsance')
+            ax.set(xlabel='Radius $(R_J)$', ylabel='Density ($m^3$)', title='Density Vs Radial Distsance')
             ax.yaxis.set_ticks_position('both')
             plt.yscale("log")
-            plt.savefig('images/radial_density_profile.png')
+            plt.savefig('images-24-jan-update/radial_density_profile.png')
             plt.show()
         return radii, densities
         
@@ -102,15 +102,15 @@ class radialOutflow:
             radii2.append(r)
         
         fig, (ax1, ax2) = plt.subplots(2)
-        ax1.semilogy(radii1, densities1, label = 'density section 1') #change to ax.plot to remove log scale
-        ax2.semilogy(radii2, densities2, label = 'density section 2') #change to ax.plot ^^
+        ax1.semilogy(radii1, densities1, label = 'Density Section 1') #change to ax.plot to remove log scale
+        ax2.semilogy(radii2, densities2, label = 'Density Section 2', color = 'r') #change to ax.plot ^^
         ax1.legend()
         ax1.set(ylabel='Density ($m^3$)' ,title='Density Vs Radial Distance')
         ax1.yaxis.set_ticks_position('both')
         ax2.legend()
-        ax2.set(xlabel='Radius (RJ)', ylabel='Density ($m^3$)') #, title='Density Vs Radial Distance')
+        ax2.set(xlabel='Radius $(R_J)$', ylabel='Density ($m^{-3}$)') #, title='Density Vs Radial Distance')
         ax2.yaxis.set_ticks_position('both')
-        plt.savefig('images/radial_density_profile_two_points.png')
+        plt.savefig('images-24-jan-update/radial_density_profile_two_points.png')
         plt.show()
         
 
@@ -174,18 +174,18 @@ class radialOutflow:
             v_values = json.load(json_dict)
         
         fig, ax = plt.subplots()
-        ax.set(xlabel = 'Radial Distance (RJ)', ylabel = 'v(kms)')
+        ax.set(xlabel = 'Radial Distance (RJ)', ylabel = 'V $(kms^{-1})$')
 
        # print(type(v_values))
         #print(v_values)
         
         for key in v_values:
             v_kms = np.array(v_values[key]) /1000
-            ax.plot(r_values, v_kms, label = 'mdot ={}'.format(key))
+            ax.plot(r_values, v_kms, label = 'Radial Velocity ({} = {}Kg/s)'.format(u'\u1E41' ,key))
             
         #print(va_values)
         va_kms = np.array(va_values)/1000
-        ax.plot(r_values, va_kms, label = 'local alfven velocity')
+        ax.plot(r_values, va_kms, label = 'Local Alfven Velocity')
         ax.legend()
         box = ax.get_position()
         #ax.set_position([box.x0, box.y0 + box.height * 0.1,
@@ -197,7 +197,7 @@ class radialOutflow:
         ax.legend()
         ax.yaxis.set_ticks_position('both')
         plt.yscale("log")
-        plt.savefig('images/radial_flow_plot.png')
+        plt.savefig('images-24-jan-update/radial_flow_plot.png')
         plt.show()
 
 '''

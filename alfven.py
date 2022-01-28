@@ -78,7 +78,8 @@ class AlfvenVel:
                 B = np.array([B_x, B_y, B_z])
                 B =  B/(10**9)  #chris's code is in nT
                 va = self.calculator(B, n)
-                Vas_row.append(va)
+                va_corrected = self.relativistic_correction(va)
+                Vas_row.append(va_corrected)
 
 
             Vas.append(Vas_row)
@@ -86,7 +87,7 @@ class AlfvenVel:
         Vas_km = np.array(Vas)/(1000)
 
         #log_vas_km = np.log(Vas_km)
-        fig, ax = plt.subplots()
+        fig, ax = plt.subplots(figsize = (25,15))
         cont = ax.contourf(self.gridx, self.gridy, Vas_km, cmap = 'bone')#, locator=ticker.LogLocator())
         ax.add_patch(Circle((0,0), 1, color='y', zorder=100, label = "Jupiter"))
         ax.add_patch(Circle((0,0), 6, color='c', zorder=90, label = "Io Orbital Radius"))
@@ -94,10 +95,10 @@ class AlfvenVel:
         ax.set_xlim(-30,30)
         ax.set_ylim(-30,30)
         degrees = theta * 180 /np.pi
-        ax.set(xlabel = 'x $R_J$ \n CML is vertically upwards', ylabel = 'y $R_J$', title = 'alfven velocity in the colatitude = {:.0f}{} plane'.format(degrees, u"\N{DEGREE SIGN}"))
-        fig.colorbar(cont, label = '$V_a km$')
+        ax.set(xlabel = 'x $(R_J)$', ylabel = 'y $(R_J)$', title = 'alfven velocity in the colatitude = {:.0f}{} plane'.format(degrees, u"\N{DEGREE SIGN}"))
+        fig.colorbar(cont, label = '$V_a (km)$')
         ax.set_aspect('equal', adjustable = 'box')
-        plt.savefig('images/va_topdown.png')
+        plt.savefig('images-24-jan-update/va_topdown.png')
         plt.show() 
 
     def topdown_seperate_equators(self, spin_eq = 'on', density = 'off'):
@@ -146,6 +147,8 @@ class AlfvenVel:
                 if r <6:
                     va = 1 *10 ** 2
                     Vas_row.append(va)
+                    n = 1e6
+                    density_row.append(n)
                     continue
                 r_cent = r 
                 phi_cent = phi
@@ -167,7 +170,8 @@ class AlfvenVel:
                 B = np.array([B_x, B_y, B_z])
                 B = B/(10**9) #CHRIS code outputs nT
                 va = self.calculator(B, den)
-                Vas_row.append(va)
+                va_corrected = self.relativistic_correction(va)
+                Vas_row.append(va_corrected)
                 density_row.append(den)
                 
             #print(density_row)
@@ -177,9 +181,9 @@ class AlfvenVel:
 
         Vas_km = np.array(Vas)/(1000)
         densities = np.array(density_list)
-        print(densities[0], '\n', densities[1])  
+        #print(densities[0], '\n', densities[1])  
         
-        print(densities.shape, '\n', Vas_km.shape)
+        #print(densities.shape, '\n', Vas_km.shape)
         fig, ax = plt.subplots()
         cont = ax.contourf(self.gridx, self.gridy, Vas_km, cmap = 'bone')#, locator=ticker.LogLocator())
         ax.add_patch(Circle((0,0), 1, color='y', zorder=100, label = "Jupiter"))
@@ -187,92 +191,110 @@ class AlfvenVel:
         ax.legend()
         ax.set_xlim(-30,30)
         ax.set_ylim(-30,30)
-        ax.set(xlabel = 'x $R_J$ \n CML is vertically upwards', ylabel = 'y $R_J$', title = 'alfven velocity in the spin plane, taking centrifugal equator into account')
-        fig.colorbar(cont, label = '$V_a km$')
+        ax.set(xlabel = 'x $(R_J)$ ', ylabel = 'y $(R_J)$', title = 'alfven velocity in the spin plane, taking centrifugal equator into account')
+        fig.colorbar(cont, label = '$V_a (km)$')
         ax.set_aspect('equal', adjustable = 'box')
-        plt.savefig('images/va_topdown_inc_cent.png')
+        plt.savefig('images-24-jan-update/va_topdown_inc_cent.png')
         plt.show() 
         if density == 'on':
         
             fig, ax = plt.subplots()
-            cont = ax.contourf(self.gridx, self.gridy, densities, cmap = 'bone')#, locator=ticker.LogLocator())
+            cont = ax.contourf(self.gridx, self.gridy, densities, cmap = 'bone', locator=ticker.LogLocator())
             ax.add_patch(Circle((0,0), 1, color='y', zorder=100, label = "Jupiter"))
             ax.add_patch(Circle((0,0), 6, color='c', zorder=90, label = "Io Orbital Radius"))
             ax.legend()
             ax.set_xlim(-30,30)
             ax.set_ylim(-30,30)
-            ax.set(xlabel = 'x $R_J$ \n CML is vertically upwards', ylabel = 'y $R_J$', title = 'density in the spin plane, taking centrifugal equator into account')
-            fig.colorbar(cont, label = 'Density $cm^-3$')
+            ax.set(xlabel = 'x $(R_J)$', ylabel = 'y $(R_J)$', title = 'density in the spin plane, taking centrifugal equator into account')
+            fig.colorbar(cont, label = 'Density $(cm^-3)$')
             ax.set_aspect('equal', adjustable = 'box')
-            plt.savefig('images/va_topdown_inc_cent.png')
+            plt.savefig('images-24-jan-update/va_topdown_inc_cent.png')
             plt.show() 
 
 
-    def sideview_seperate_equators(self):
+    def sideview_seperate_equators(self,phi_lh, lines = 'off'):
+
         ''' 
-        Plots the alfven velocity for a side on view 
-        ''' 
-        phi = 0 
-        y_s = []
-        z_s = []
-        spacing = self.stop/self.numpoints
-        for i in range(self.numpoints):
-            y_s.append(i * spacing)
-            z_s.append(i* spacing)
-            y_s.append(-i * spacing)
-            z_s.append(-i* spacing)
-        y_s.sort()
-        z_s.sort()
-    
-        n_0s = []
+        plots a slice of the alfven velocity at a certain longitude given by phi_lh (in degrees)
+        '''
+        phi_rh = 2*np.pi - (phi_lh * np.pi/180)
+        #print(phi_rh)
+        densities = []
+        grids, gridz = self.help.makegrid_2d_negatives(200 ,gridsize= self.stop)
+
+        r_cent_points = np.linspace(-30, 30, num=200)
+        cent_plot_points = []
+        for point in r_cent_points:
+            if point < 0:
+                phi = phi_rh + np.pi 
+            else: 
+                phi = phi_rh
+
+
+            r_cent, theta_cent, phi_cent = self.help.change_equators(point, np.pi/2, phi)
+            z_cent = abs(point) * np.cos(theta_cent)
+
+            cent_plot_points.append([point, -z_cent]) 
+        cent_plot_points = np.array(cent_plot_points)
+
+        cent_plot_points_t = np.transpose(cent_plot_points)
+        
+
         Vas = []
+        for i in range(len(gridz)):
+            print('new row, {} to go'.format(len(gridz)-i))
+            Vas_row = []
 
-        for i in range(len(z_s)):
-            print('new row, {} to go'.format(len(z_s)-i))
-            Vas_row = [] 
-            for j in range(len(y_s)):
-                r = np.sqrt((y_s[j])**2 + (z_s[i])**2)
-                theta = np.arctan2(y, z)
-                HeightAboveCent = self.help.height_centrifugal_equator(r, phi)
-                r_cent = self.help.length_centrifual_equator(r, phi)
-                scaleheight = self.densityfunctions.scaleheight(r_cent)
-                
+            for j in range(len(grids)):
+                z = gridz[i][j]
+                s = grids[i][j]
 
-                
-                #print(r)
-                if r <6:
-                    va = 1 *10 ** 2
+                r = np.sqrt(z**2 + s**2)
+                phi = phi_rh
+                theta = np.arctan2(s,z)
+               
+                if r < 6:
+                    va = 1e6
                     Vas_row.append(va)
                     continue
-                n_0 = self.radialfunctions.radial_density(abs(r_cent))
-                n = self.densityfunctions.density(n_0, HeightAboveCent, scaleheight) 
-                ''' 
-                this is wrong as it doesn't include the height above the spin equator, just the height of the spin equator above the centrifigual equator!
-                ''' 
+                    
+                n = self.densityfunctions.density_sep_equators(r, theta, phi)
+                #print(s, z, theta, phi)
+                
+                #print(n)
+               
                 B_r, B_theta, B_phi = self.field.Internal_Field(r, theta, phi, model=self.model) #calculates the magnetic field due to the internal field in spherical polar that point)
                 B_current = self.field.CAN_sheet(r, theta, phi) #calculates the magnetic field due to the current sheet in spherical polar
                 B_notcurrent = np.array([B_r, B_theta, B_phi]) 
                 B_overall = np.add(B_current, B_notcurrent) #adds up the total magnetic field 
                 B_x, B_y, B_z = self.help.Bsph_to_Bcart(B_overall[0], B_overall[1], B_overall[2], r, theta, phi)
                 B = np.array([B_x, B_y, B_z])
-                B = B/(10**9) #CHRIS code outputs nT
+                B = B/(1e9) #CHRIS code outputs nT
                 va = self.calculator(B, n)
-                Vas_row.append(va)
-
+                va_corrected = self.relativistic_correction(va)
+                Vas_row.append(va_corrected)
             Vas.append(Vas_row)
-        Vas_km = np.array(Vas)/(1000)
+            
+        vas_km = np.array(Vas)/1e3
+        #print(Vas)
 
-        fig, ax = plt.subplots()
-        cont = ax.contourf(self.gridx, self.gridy, Vas_km, cmap = 'bone')#, locator=ticker.LogLocator())
+        fig, ax = plt.subplots(figsize = (25,16))
+        cont = ax.contourf(grids, gridz, Vas, cmap = 'bone', locator=ticker.LogLocator())
         ax.add_patch(Circle((0,0), 1, color='y', zorder=100, label = "Jupiter"))
         ax.add_patch(Circle((0,0), 6, color='c', zorder=90, label = "Io Orbital Radius"))
-        ax.legend()
+        ax.text(0.95, 0.01, 'SYS III (lh) Longitutude = {} '.format(phi_lh),
+        verticalalignment='bottom', horizontalalignment='right',
+        transform=ax.transAxes,
+        color='k', fontsize=15)
         ax.set_xlim(-30,30)
-        ax.set_ylim(-30,30)
-        ax.set(xlabel = 'y $R_J$ \n CML is out of screen', ylabel = 'z $R_J$', title = 'alfven velocity in the plane perpendicular to CML, taking centrifugal equator into account')
-        fig.colorbar(cont, label = '$V_a km$')
+        ax.set_ylim(-15,15)
+        ax.set(xlabel = '$R_J$ \n', ylabel = '$R_J$', title = 'Meridian Slice')
+        if lines == 'on':
+            ax.plot(cent_plot_points_t[0], cent_plot_points_t[1], label = 'Centrifugal Equator')
+        fig.colorbar(cont, label = 'V$_a$ $(kms^{-1})$')
         ax.set_aspect('equal', adjustable = 'box')
-        plt.savefig('images/va_side_inc_cent.png')
+        ax.legend()
+        plt.savefig('images-24-jan-update/va side slice.png')
         plt.show() 
 
 
@@ -307,7 +329,7 @@ class AlfvenVel:
             B_notcurrent = np.array([B_r, B_theta, B_phi]) 
             B_overall = np.add(B_current, B_notcurrent) #adds up the total magnetic field 
             B_cart = self.help.Bsph_to_Bcart(B_overall[0], B_overall[1], B_overall[2], r*Rj, point[1], point[2])
-            va = self.calculator(B_cart, n)
+            va = self.calculator(B_cart/1e9, n)
             Vas.append(va)
         points_cart = np.array(points_cart)
         log_vas = np.log(Vas)
@@ -333,14 +355,15 @@ class AlfvenVel:
         plt.show()
     
         
-    def travel_time(self, startpoint = [30, np.pi/2, 0]):
+    def travel_time(self, startpoint = [30, np.pi/2, 0], direction = 'forward'):
         '''
         Calculate the travel path/time of an alfven wave from a given startpoint to the ionosphere. 
         input startpoint [r, theta, phi] where r is in rj and phi is left handed
         ''' 
         startpoint[0] = startpoint[0]*Rj
-        plot_results = self.plotter.trace_magnetic_field(starting_cordinates=startpoint, one_way='on', break_point=2)
+        plot_results = self.plotter.trace_magnetic_field(starting_cordinates=startpoint, one_way='on', break_point=2, step = 0.0001, pathing= direction)
         points = np.array(plot_results[0])
+        print(len(points))
         Bs = np.array(plot_results[2]) /10e9 # turn nano tesla into T
         ''' 
         this returns the path taken (in terms of point by point) taken by the alfven wave (points)
@@ -385,6 +408,36 @@ class AlfvenVel:
             traveltime = distance/va_corrected
             time += traveltime
         print('travel time = {:.2f}s (= {:.1f}mins)'.format(time, time/60))
+
+        '''
+        As the travel time seems to be a bit weird, good idea to be plot the path etc 
+        '''
+        plottable_list = np.transpose(points)
+
+        fig = plt.figure()
+        ax = fig.gca(projection='3d')
+        
+
+        #turning the axis into Rj
+        plottable_list_rj = plottable_list/Rj
+
+        ax.plot(plottable_list_rj[0], plottable_list_rj[1], plottable_list_rj[2],color = 'black', label = 'Field Trace')
+        
+        #make the sphere and setup the plot
+        x,y, z = self.plotter.make_sphere()
+        ax.plot_surface(x, y, z, color = 'yellow', zorder=100, label = 'Jupiter')
+        ax.set_xlim3d(-40, 40)
+        ax.set_ylim3d(-40, 40)
+        ax.set_zlim3d(-40, 40)
+        ax.set_xlabel('$X, R_j$', fontsize=10)
+        ax.set_ylabel('$Y, R_J$', fontsize=10)
+        plt.title('Magnetic Field Trace using {} model, including current sheet'.format(self.model))
+        ax.text(1,2,40, 'time = {:.2f}s'.format(time))
+
+        #plt.legend()
+        plt.savefig('images-24-jan-update/travel_time_trace.png'.format(self.model))
+        plt.show()
+
         return time
 
 
@@ -402,10 +455,9 @@ class AlfvenVel:
 
 test = AlfvenVel(numpoints=200)
 #test.top_down_matched_equators()
-#test.topdown_seperate_equators(density = 'on')
-test.travel_time([50, np.pi/2, 212* np.pi/180])
 
+#test.topdown_seperate_equators(density = 'on')
+test.travel_time([30, np.pi/2, 212* np.pi/180], direction='forward')
+#test.sideview_seperate_equators(331)
                 
 
-
-        
