@@ -355,26 +355,36 @@ class AlfvenVel:
         plt.show()
     
         
-    def travel_time(self, startpoint = [30, np.pi/2, 0], direction = 'forward'):
+    def travel_time(self, startpoint = [30, np.pi/2, 212* np.pi/180], direction = 'forward', path_plot = 'off', dr_plot = 'off', print_time = 'on', va_plot ='off'):
         '''
         Calculate the travel path/time of an alfven wave from a given startpoint to the ionosphere. 
         input startpoint [r, theta, phi] where r is in rj and phi is left handed
         ''' 
         startpoint[0] = startpoint[0]*Rj
-        plot_results = self.plotter.trace_magnetic_field(starting_cordinates=startpoint, one_way='on', break_point=2, step = 0.0001, pathing= direction)
+        plot_results = self.plotter.trace_magnetic_field(starting_cordinates=startpoint, one_way='on', break_point=2, step = 0.001, pathing= direction)
         points = np.array(plot_results[0])
-        print(len(points))
-        Bs = np.array(plot_results[2]) /10e9 # turn nano tesla into T
+        #print(len(points))
+        drs = np.array(plot_results[3])
+        rs = np.array(plot_results[4])
+        drs_km = drs/1e3
+        rs_km = rs/1e3
+        rs_rj = rs/Rj
+        rs_rj_popped =  rs_rj[rs_rj > 6]
+        Bs = np.array(plot_results[2]) / 1e9 # turn nano tesla into T
         ''' 
         this returns the path taken (in terms of point by point) taken by the alfven wave (points)
         and the magnetic field at each points (Bs)
         '''  
         time = 0 
+        va_uncorrected_list = []
+        va_corrected_list = []
         for i in range(len(points)-1):
             start_point = points[i]
             end_point = points[i+1]
             difference = end_point - start_point
             distance = np.linalg.norm(difference)
+            #distance = np.sqrt( ((end_point[0] - start_point[0])**2) + ((end_point[1] - start_point[1])**2) + ((end_point[2] - start_point[2])**2) )
+            
             midpoint = end_point - difference/2
             
             B_start = Bs[i]
@@ -390,6 +400,17 @@ class AlfvenVel:
             - will also have to add in the approximate function for n inside of Io radius
             '''
             r, theta, phi = self.help.cart_to_sph(midpoint[0], midpoint[1], midpoint[2])
+            r = r/Rj
+            
+            if r < 6: 
+                '''
+                this is where the density problem lies - we need to put a better version of the density in here! 
+                ''' 
+                va = 0.9 * 3e8
+                traveltime = distance/va
+                time += traveltime
+                continue
+                
             r_cent = r 
             phi_cent = phi
             theta_shift = self.help.centrifugal_equator(r, phi)
@@ -401,44 +422,88 @@ class AlfvenVel:
             n = self.densityfunctions.density(n_0, z_cent, scaleheight)
 
             va = self.calculator(averageB, n)
-            '''  
-            -later plan to improve this to a proper relativistic correction
-            ''' 
+            #print(averageB, n)
+            va_uncorrected_list.append(va)
+
             va_corrected = self.relativistic_correction(va)
+            va_corrected_list.append(va)
+            
+            
             traveltime = distance/va_corrected
+            #print('start Point {} \nEnd Point {} \nMidpoint {} \nDifference {} \nDistance {} \nva {} \nTravel time{}\n \n '.format(start_point, end_point, midpoint, difference, distance, va_corrected, traveltime ))
             time += traveltime
-        print('travel time = {:.2f}s (= {:.1f}mins)'.format(time, time/60))
+        
+        if print_time == 'on':
+            print('travel time = {:.2f}s (= {:.1f}mins)'.format(time, time/60))
 
         '''
         As the travel time seems to be a bit weird, good idea to be plot the path etc 
         '''
         plottable_list = np.transpose(points)
+        if path_plot == 'on':
+            fig = plt.figure()
+            ax = fig.gca(projection='3d')
+            
 
-        fig = plt.figure()
-        ax = fig.gca(projection='3d')
-        
+            #turning the axis into Rj
+            plottable_list_rj = plottable_list/Rj
 
-        #turning the axis into Rj
-        plottable_list_rj = plottable_list/Rj
+            ax.plot(plottable_list_rj[0], plottable_list_rj[1], plottable_list_rj[2],color = 'black', label = 'Field Trace')
+            
+            #make the sphere and setup the plot
+            x,y, z = self.plotter.make_sphere()
+            ax.plot_surface(x, y, z, color = 'yellow', zorder=100, label = 'Jupiter')
+            ax.set_xlim3d(-40, 40)
+            ax.set_ylim3d(-40, 40)
+            ax.set_zlim3d(-40, 40)
+            ax.set_xlabel('$X, R_j$', fontsize=10)
+            ax.set_ylabel('$Y, R_J$', fontsize=10)
+            fig.suptitle('Field Line for which travel time was calculated using {}'.format(self.model))
+            ax.set_title('Start Point = ({:.2f}, {:.1f}{}, {:.1f}{})SYSIII'.format(startpoint[0]/Rj, startpoint[1] * 180/np.pi, u"\N{DEGREE SIGN}", startpoint[2] * 180/np.pi, u"\N{DEGREE SIGN}"))
+            ax.text(1,2,40, 'time = {:.1f}s (= {:.1f}mins)'.format(time, time/60))
 
-        ax.plot(plottable_list_rj[0], plottable_list_rj[1], plottable_list_rj[2],color = 'black', label = 'Field Trace')
-        
-        #make the sphere and setup the plot
-        x,y, z = self.plotter.make_sphere()
-        ax.plot_surface(x, y, z, color = 'yellow', zorder=100, label = 'Jupiter')
-        ax.set_xlim3d(-40, 40)
-        ax.set_ylim3d(-40, 40)
-        ax.set_zlim3d(-40, 40)
-        ax.set_xlabel('$X, R_j$', fontsize=10)
-        ax.set_ylabel('$Y, R_J$', fontsize=10)
-        plt.title('Magnetic Field Trace using {} model, including current sheet'.format(self.model))
-        ax.text(1,2,40, 'time = {:.2f}s'.format(time))
+            #plt.legend()
+            plt.savefig('images-24-jan-update/travel_time_trace.png'.format(self.model))
+            plt.show()
+        if dr_plot == 'on':
 
-        #plt.legend()
-        plt.savefig('images-24-jan-update/travel_time_trace.png'.format(self.model))
-        plt.show()
+            fig, ax1 = plt.subplots()
+            numbers = list(range(len(drs_km)))
+            
+            ax1.plot(numbers, drs_km, label = 'Distance Between Points (km)', color = 'k')
+            ax1.set_xlabel('Point Index')
+            ax1.set_ylabel('Distance Between Points (km)', color = 'k')
+            ax1.tick_params(axis='y', labelcolor='k')
+            #ax1.legend(loc=0)
 
-        return time
+            ax2 = ax1.twinx() 
+            ax2.plot(numbers, rs_km, label = 'r ($km$)', color = 'c', linestyle ='--')
+            ax2.set_ylabel('Distance From Planet (km)', color = 'c')
+            ax2.tick_params(axis='y', labelcolor='c')
+            #ax2.legend(loc = 1)
+            #plt.legend()
+            plt.show()
+        if va_plot == 'on':
+            fig, ax1 = plt.subplots()
+            numbers = list(range(len(va_corrected_list)))
+            
+            ax1.plot(numbers, va_corrected_list, label = '$v_A$ corrected ($ms^{-1}$)', color = 'c')
+            ax1.set_xlabel('Point Index')
+            ax1.set_ylabel('Speed ($ms^{-1}$)', color = 'b')
+            ax1.tick_params(axis='y', labelcolor='b')
+            ax1.plot(numbers, va_uncorrected_list, label = '$v_A$ uncorrected ($ms^{-1}$)', color = 'b', linestyle ='--')
+            #ax1.legend()
+            ax2 = ax1.twinx() 
+            ax2.plot(numbers, rs_rj_popped, label = 'Distance from planet ($R_J$)', color = 'r', linestyle ='-')
+            ax2.set_ylabel('R ($R_J$)', color = 'r')
+            ax2.tick_params(axis='y', labelcolor='r')
+            #ax2.legend()
+            #plt.grid(True)
+            plt.figlegend()
+            fig.suptitle('Effect of including relativistic correction')
+            plt.savefig('images-24-jan-update/va correction effects.png')
+            plt.show()
+        return time, va_corrected_list, va_uncorrected_list, plottable_list, rs_km
 
 
     def relativistic_correction(self, va):
@@ -447,8 +512,58 @@ class AlfvenVel:
         return corrected va 
         equation taken from https://www.aanda.org/articles/aa/pdf/2012/06/aa18630-11.pdf eq 2. 
         '''
-        corrected_va = (va * 3e8)/np.sqrt(va**2 + 3e8**2)
+        corrected_va = (va * 3e8)/np.sqrt(va**2 + (3e8)**2)
         return corrected_va
+
+    def plot_rel_effect(self, both = 'on'):
+        calc = self.travel_time()
+        points_plottable = calc[3]
+        plottable_list_rj = points_plottable/Rj
+        va_uncorrected_list = np.array(calc[2])/1e3
+        va_corrected_list = np.array(calc[1])/1e3
+        numbers = list(range(len(va_corrected_list)))
+        rs_km = calc[4]
+        rs_km_plot = rs_km[:-1]
+        if both =='on':
+            fig = plt.figure(figsize=plt.figaspect(.5))
+            ax = fig.add_subplot(1, 2, 1, projection='3d')
+            x,y, z = self.plotter.make_sphere()
+            ax.plot_surface(x, y, z, color = 'yellow', zorder=100, label = 'Jupiter')
+            ax.set_xlim3d(-40, 40)
+            ax.set_ylim3d(-40, 40)
+            ax.set_zlim3d(-40, 40)
+            ax.set_xlabel('$X, R_j$', fontsize=10)
+            ax.set_ylabel('$Y, R_J$', fontsize=10)
+            ax.plot(plottable_list_rj[0], plottable_list_rj[1], plottable_list_rj[2],color = 'black', label = 'Field Trace')
+
+            ax2 = fig.add_subplot(1, 2, 2)
+            ax2.plot(rs_km_plot, va_corrected_list, label = 'va corrected', color = 'c')
+
+            ax3 = ax2.twinx()
+
+            ax3.plot(rs_km_plot, va_uncorrected_list, label = 'va uncorrected', color = 'r', linestyle = '--')
+
+            plt.show()
+
+    def plot_correction(self):
+        c = 3e8
+        speeds = np.linspace(0, 10*c, num = 1000)    
+        rel_speeds = []
+        for speed in speeds:
+            rel_speed = self.relativistic_correction(speed)
+            rel_speeds.append(rel_speed)    
+        normalised_rel_speeds = np.array(rel_speeds)/c
+        normalised_speeds = np.array(speeds)/c
+        fig, ax = plt.subplots()
+        ax.plot(normalised_rel_speeds, normalised_speeds, color = 'b')
+        ax.set(ylabel = 'Speed/c', xlabel = 'Corrected Speed/c')#, xlim =(0,1.6*c), ylim =(0,1.6*c))
+        plt.suptitle('Effect of Relatavistic Correction on Speed')
+        ax.grid()
+
+        plt.show()
+
+      
+
 
             
 
@@ -457,7 +572,8 @@ test = AlfvenVel(numpoints=200)
 #test.top_down_matched_equators()
 
 #test.topdown_seperate_equators(density = 'on')
-test.travel_time([30, np.pi/2, 212* np.pi/180], direction='forward')
+test.travel_time([30, np.pi/2, 212* np.pi/180], direction='backward', dr_plot='off', path_plot = 'off', va_plot = 'on')
 #test.sideview_seperate_equators(331)
-                
+#test.plot_rel_effect()
+#test.plot_correction()
 
