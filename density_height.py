@@ -11,6 +11,7 @@ import matplotlib as mpl
 from mag_field_models import field_models
 import scipy
 import scipy.special
+import matplotlib.colors as mcolors
 from radial_outflow import radialOutflow
 from matplotlib import ticker, cm
 from field_and_current_sheet import InternalAndCS
@@ -205,7 +206,10 @@ class DensityHeight:
         densities_cm = np.array(densities)/1e6
         densities_cm_edits = np.clip(densities_cm, 1e-2, 1e10)
         fig, ax = plt.subplots(figsize = (25,16))
-        cont = ax.contourf(grids, gridz, densities_cm_edits, cmap = 'bone', locator=ticker.LogLocator())
+        lev_exp = np.arange(np.floor(np.log10(densities_cm_edits.min())-1), np.ceil(np.log10(densities_cm_edits.max())+1), step = 0.5)
+        print(lev_exp)
+        levs = np.power(10, lev_exp)
+        cont = ax.contourf(grids, gridz, densities_cm_edits, cmap = 'bone', levels = levs, norm=mcolors.LogNorm())#, locator=ticker.LogLocator()) #, levels = 14)
         ax.add_patch(Circle((0,0), 1, color='y', zorder=100, label = "Jupiter"))
         ax.add_patch(Circle((0,0), 6, color='c', zorder=90, label = "Io Orbital Radius"))
         ax.text(0.95, 0.01, 'SYS III (LH) Longitutude = {}{} '.format(phi_lh, u"\N{DEGREE SIGN}"),
@@ -254,11 +258,9 @@ class DensityHeight:
 
 
 
-'''
 
 test = DensityHeight(numpoints= 100, start= 5, stop = 30)
 #test.plotting(scale_height='on', density = 'on')    
 #test.equators_cent_calculated()
 #test.density_sep_equators(30, np.pi/2, 360*np.pi/180)
 test.meridian_slice(159)
-'''

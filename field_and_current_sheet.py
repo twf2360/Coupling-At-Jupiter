@@ -71,6 +71,8 @@ class InternalAndCS:
         points = [] #this is the list that will eventually be plotted
         Br_list = []
         B_list = []
+        dr_list = []
+        r_list = []
         i = 0
         direction = 1
         if pathing == 'backward':
@@ -82,6 +84,7 @@ class InternalAndCS:
             loops for as long as r is larger than a defined value
             '''
             r = coordinates[0]
+            
             if r <= break_point * Rj: #defines when the loop is broken out of 
                 if one_way == 'on':
                     break
@@ -113,6 +116,8 @@ class InternalAndCS:
             coordinates = [px,py,pz] #change the definition of the coordinates from spherical to cartesian 
             Bunit = self.help.unit_vector_cart(B) #calculates the unit vector in cartesian direction
             dr = r * step  #THIS IS HOW WE UPPDATE THE COORDINATES - IF IT TAKES TOO LONG, THIS NEEDS CHANGING IF IT TAKES TOO LONG OR IS GETTING WEIRD CLOSE TO PLANET
+            dr_list.append(dr)
+            r_list.append(r)
             change = dr * Bunit * direction * path_direction#the change from this coordinate to the next one is calculated
             coordinates = np.add(coordinates, change) #add the change to the current co ordinate
             pr, ptheta, pphi = self.help.cart_to_sph(coordinates[0], coordinates[1], coordinates[2]) #change the coordinatres back in spherical
@@ -126,7 +131,7 @@ class InternalAndCS:
                     print(' x= {}, y = {}, z =  {}'.format(px,py,pz))
                     print('bunit = {}, change = {}, dr = {} \n \n'.format(Bunit, change, dr))
  
-        return points, Br_list, B_list
+        return points, Br_list, B_list, dr_list, r_list
 
 
 
