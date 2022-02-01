@@ -128,7 +128,16 @@ class HelpfulFunctions():
         x_cent, y_cent, z_cent = self.sph_to_cart(r_cent, theta_cent, phi_cent)
         return x_cent, y_cent, z_cent
 
-    
+    def simple_mag_equator(self, r, theta, phi_lh):
+        ''' r in rj, theta colatitude, phi lh in rad''' 
+        r = r
+        phi = phi_lh
+        tilt_direction = 159.2 * np.pi/180 #200.8 seems to be right. but 159.2 
+        tilt_magnitude = 9.6 * np.pi/180
+        tilt = tilt_magnitude * np.cos(phi_lh - tilt_direction)
+        theta = theta - tilt
+        return r, theta, phi
+        '''so jupiters mag field is tilted by apporximated 9.6 deg using vip4 towards 200.8 lh longitude '''
     '''
     #################################### NOTE ######################################
     THE TWO BELOW FUNCTIONS SHOULDN'T BE USED - i don't think they are effective, however i am loathe to delete them jic

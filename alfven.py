@@ -6,15 +6,19 @@ import json
 from helpful_functions import HelpfulFunctions
 from mpl_toolkits.mplot3d import Axes3D
 from matplotlib.patches import Circle, PathPatch
+from matplotlib.lines import Line2D
 import mpl_toolkits.mplot3d.art3d as art3d
 import matplotlib as mpl
 from mag_field_models import field_models
 import scipy
+import matplotlib.colors as mcolors
 import scipy.special
 from density_height import DensityHeight
 from radial_outflow import radialOutflow
 from matplotlib import ticker, cm
 from field_and_current_sheet import InternalAndCS
+plt.rcParams.update({'font.size': 22})
+plt.rcParams['legend.fontsize'] = 14
 Rj = 7.14 * (10 ** 7)
 mu_0 = 1.25663706212 * 10 ** -6
 
@@ -217,7 +221,8 @@ class AlfvenVel:
         ''' 
         plots a slice of the alfven velocity at a certain longitude given by phi_lh (in degrees)
         '''
-        phi_rh = 2*np.pi - (phi_lh * np.pi/180)
+        phi_rh = phi_lh#2*np.pi - (phi_lh * np.pi/180) 
+        ''' lets mess with this a bit'''
         #print(phi_rh)
         densities = []
         grids, gridz = self.help.makegrid_2d_negatives(200 ,gridsize= self.stop)
@@ -259,10 +264,13 @@ class AlfvenVel:
                     continue
                     
                 n = self.densityfunctions.density_sep_equators(r, theta, phi)
+                if n < 1e4: 
+                    n = 1e4
+                    ''' CURRENT LOW DENSITY CORRECTION'''
                 #print(s, z, theta, phi)
                 
                 #print(n)
-               
+                ''' NOTE:THERE'S NOT A PHI SWITCH HERE FOR WHICH SIDE YOU'RE ON! '''
                 B_r, B_theta, B_phi = self.field.Internal_Field(r, theta, phi, model=self.model) #calculates the magnetic field due to the internal field in spherical polar that point)
                 B_current = self.field.CAN_sheet(r, theta, phi) #calculates the magnetic field due to the current sheet in spherical polar
                 B_notcurrent = np.array([B_r, B_theta, B_phi]) 
@@ -279,7 +287,9 @@ class AlfvenVel:
         #print(Vas)
 
         fig, ax = plt.subplots(figsize = (25,16))
-        cont = ax.contourf(grids, gridz, Vas, cmap = 'bone', locator=ticker.LogLocator())
+        lev_exp = np.arange(np.floor(np.log10(vas_km.min())-1), np.ceil(np.log10(vas_km.max())+1), step = 0.25)
+        levs = np.power(10, lev_exp)
+        cont = ax.contourf(grids, gridz, vas_km, cmap = 'bone', levels = levs, norm=mcolors.LogNorm())# locator=ticker.LogLocator())
         ax.add_patch(Circle((0,0), 1, color='y', zorder=100, label = "Jupiter"))
         ax.add_patch(Circle((0,0), 6, color='c', zorder=90, label = "Io Orbital Radius"))
         ax.text(0.95, 0.01, 'SYS III (lh) Longitutude = {} '.format(phi_lh),
@@ -361,7 +371,11 @@ class AlfvenVel:
         input startpoint [r, theta, phi] where r is in rj and phi is left handed
         ''' 
         startpoint[0] = startpoint[0]*Rj
+        #startpoint[2] = 2*np.pi - startpoint[0]
+        phi_lh = startpoint[2]
+
         plot_results = self.plotter.trace_magnetic_field(starting_cordinates=startpoint, one_way='on', break_point=2, step = 0.001, pathing= direction)
+
         points = np.array(plot_results[0])
         #print(len(points))
         drs = np.array(plot_results[3])
@@ -378,6 +392,7 @@ class AlfvenVel:
         time = 0 
         va_uncorrected_list = []
         va_corrected_list = []
+
         for i in range(len(points)-1):
             start_point = points[i]
             end_point = points[i+1]
@@ -406,7 +421,7 @@ class AlfvenVel:
                 '''
                 this is where the density problem lies - we need to put a better version of the density in here! 
                 ''' 
-                va = 0.9 * 3e8
+                va = 5e6
                 traveltime = distance/va
                 time += traveltime
                 continue
@@ -420,7 +435,10 @@ class AlfvenVel:
             n_0 = self.radialfunctions.radial_density(r_cent)
             x_cent, y_cent, z_cent = self.help.sph_to_cart(r_cent, theta_cent, phi_cent)
             n = self.densityfunctions.density(n_0, z_cent, scaleheight)
-
+            
+            if n < 1e4: 
+                n = 1e4
+                ''' CURRENT LOW DENSITY CORRECTION'''
             va = self.calculator(averageB, n)
             #print(averageB, n)
             va_uncorrected_list.append(va)
@@ -435,7 +453,6 @@ class AlfvenVel:
         
         if print_time == 'on':
             print('travel time = {:.2f}s (= {:.1f}mins)'.format(time, time/60))
-
         '''
         As the travel time seems to be a bit weird, good idea to be plot the path etc 
         '''
@@ -459,7 +476,7 @@ class AlfvenVel:
             ax.set_xlabel('$X, R_j$', fontsize=10)
             ax.set_ylabel('$Y, R_J$', fontsize=10)
             fig.suptitle('Field Line for which travel time was calculated using {}'.format(self.model))
-            ax.set_title('Start Point = ({:.2f}, {:.1f}{}, {:.1f}{})SYSIII'.format(startpoint[0]/Rj, startpoint[1] * 180/np.pi, u"\N{DEGREE SIGN}", startpoint[2] * 180/np.pi, u"\N{DEGREE SIGN}"))
+            ax.set_title('Start Point = ({:.0f}, {:.1f}{}, {:.1f}{})SYSIII'.format(startpoint[0]/Rj, startpoint[1] * 180/np.pi, u"\N{DEGREE SIGN}", phi_lh * 180/np.pi, u"\N{DEGREE SIGN}"))
             ax.text(1,2,40, 'time = {:.1f}s (= {:.1f}mins)'.format(time, time/60))
 
             #plt.legend()
@@ -486,6 +503,7 @@ class AlfvenVel:
         if va_plot == 'on':
             fig, ax1 = plt.subplots()
             numbers = list(range(len(va_corrected_list)))
+            numbers_r = list(range(len(rs_rj_popped)))
             
             ax1.plot(numbers, va_corrected_list, label = '$v_A$ corrected ($ms^{-1}$)', color = 'c')
             ax1.set_xlabel('Point Index')
@@ -494,7 +512,7 @@ class AlfvenVel:
             ax1.plot(numbers, va_uncorrected_list, label = '$v_A$ uncorrected ($ms^{-1}$)', color = 'b', linestyle ='--')
             #ax1.legend()
             ax2 = ax1.twinx() 
-            ax2.plot(numbers, rs_rj_popped, label = 'Distance from planet ($R_J$)', color = 'r', linestyle ='-')
+            ax2.plot(numbers_r, rs_rj_popped, label = 'Distance from planet ($R_J$)', color = 'r', linestyle ='-')
             ax2.set_ylabel('R ($R_J$)', color = 'r')
             ax2.tick_params(axis='y', labelcolor='r')
             #ax2.legend()
@@ -562,6 +580,112 @@ class AlfvenVel:
 
         plt.show()
 
+    def multiple_travel_times(self, num = 8, plot = 'on', direction = 'forward'):
+        ''' docstring goes here ''' 
+
+        ''' TO START WITH, THIS IS JUST GONNA BE ALL ON ONE PLOT, BUT IT COULD BE EXTENDED TO HAVE THEM ALL ON SEPERATE PLOTS! ''' 
+        startingPoints = []
+        spacing = 2*np.pi/num
+        for n in range(num):
+            startingPoints.append([30, np.pi/2, n*spacing])
+        fig = plt.figure()
+        ax = fig.gca(projection='3d') # initialise figure
+        colours = ['b','g','r','c','m','k',] # just setting this up for use later
+        legend_elements = [] #MATPLOTLIB IS A PAIN
+        #make the sphere 
+        x,y, z = self.plotter.make_sphere()
+        ax.plot_surface(x, y, z, color = 'yellow', zorder=100, label = 'Jupiter')
+        ax.set_xlim3d(-40, 40)
+        ax.set_ylim3d(-40, 40)
+        ax.set_zlim3d(-40, 40)
+        ax.set_xlabel('$X, R_j$', fontsize=10)
+        ax.set_ylabel('$Y, R_J$', fontsize=10)
+        color_index = 0
+        angle_time_dictionary = {}
+        for point in startingPoints:
+            point[2] = 2*np.pi - point[2]
+            phi_lh = point[2]
+            phi_lh_deg = phi_lh * 180/np.pi
+            calc = self.travel_time(startpoint=point, print_time='off', direction = direction)
+            time = calc[0]
+            plot_points = calc[3]
+            plot_points_rj = np.array(plot_points)/Rj
+            angle_time_dictionary[phi_lh] = time
+            if plot =='on':
+                label = '$\u03BB_(III)$ = {}{}, time = {:.0f}mins'.format(phi_lh_deg,u"\N{DEGREE SIGN}", time/60)
+                ax.plot(plot_points_rj[0], plot_points_rj[1], plot_points_rj[2], label = label ,color = colours[color_index])             
+                legend_elements.append(Line2D([0], [0], color=colours[color_index], lw=2, label=label))
+            color_index +=1
+            if color_index > len(colours)-1:
+                color_index = 0
+        
+        print(angle_time_dictionary)
+        if plot == 'on':
+            
+            ax.legend(handles=legend_elements, loc = 'upper left')
+            plt.show()
+        return angle_time_dictionary
+
+    #def plot_angle_vs_time()
+            
+    def plot_B_debug_time(self, phi_lh = 69):
+        grids, gridz = self.help.makegrid_2d_negatives(200 ,gridsize= self.stop) #CHANGE THIS BACK TO 100 WHEN ITS WORKING
+        phi_rh = 360-phi_lh
+        phi_lh_rad = phi_lh * np.pi/180
+        phi_rh_rad = phi_rh *np.pi/180
+        Bs = []
+        for i in range(len(gridz)):
+            print('new row, {} to go'.format(len(gridz)-i))
+            Bs_row = []
+
+            for j in range(len(grids)):
+                z = gridz[i][j]
+                s = grids[i][j]
+                r = np.sqrt(z**2 + s**2)
+                if r<6:
+                    Bs_row.append(1e-9)
+                    continue
+                '''
+                if s<0:
+                    phi = phi_rh_rad + np.pi
+                else:
+                    phi = phi_rh_rad
+                '''
+                phi = phi_lh_rad
+                theta = np.arctan2(s,z)
+                B_r, B_theta, B_phi = self.field.Internal_Field(r, theta, phi, model=self.model) #calculates the magnetic field due to the internal field in spherical polar that point)
+                B_current = self.field.CAN_sheet(r, theta, phi) #calculates the magnetic field due to the current sheet in spherical polar
+                B_notcurrent = np.array([B_r, B_theta, B_phi]) 
+                B_overall = np.add(B_current, B_notcurrent) #adds up the total magnetic field 
+                B_x, B_y, B_z = self.help.Bsph_to_Bcart(B_overall[0], B_overall[1], B_overall[2], r, theta, phi)
+                B = np.array([B_x, B_y, B_z])
+                B = B/(1e9) #CHRIS code outputs nT
+                magB = np.linalg.norm(B)
+                Bs_row.append(magB)
+            Bs.append(Bs_row)
+        Bs_plot = np.array(Bs)
+        fig, ax = plt.subplots(figsize = (25,16))
+        lev_exp = np.arange(np.floor(np.log10(np.min(Bs_plot))-1), np.ceil(np.log10(np.max(Bs_plot))+1), step = 0.25)
+        levs = np.power(10, lev_exp)
+        cont = ax.contourf(grids, gridz, Bs_plot, cmap = 'bone', levels = levs, norm=mcolors.LogNorm())# locator=ticker.LogLocator())
+        ax.add_patch(Circle((0,0), 1, color='y', zorder=100, label = "Jupiter"))
+        ax.add_patch(Circle((0,0), 6, color='c', zorder=90, label = "Io Orbital Radius"))
+        ax.text(0.95, 0.01, 'SYS III (lh) Longitutude = {} '.format(phi_lh),
+        verticalalignment='bottom', horizontalalignment='right',
+        transform=ax.transAxes,
+        color='k', fontsize=15)
+        ax.set_xlim(-30,30)
+        ax.set_ylim(-15,15)
+        ax.set(xlabel = '$R_J$ \n', ylabel = '$R_J$', title = 'Meridian Slice')
+        fig.colorbar(cont, label = 'B $T$')
+        ax.set_aspect('equal', adjustable = 'box')
+        ax.legend()
+        plt.savefig('images-24-jan-update/B side slice.png')
+        plt.show() 
+
+            
+
+
       
 
 
@@ -572,8 +696,11 @@ test = AlfvenVel(numpoints=200)
 #test.top_down_matched_equators()
 
 #test.topdown_seperate_equators(density = 'on')
-test.travel_time([30, np.pi/2, 212* np.pi/180], direction='backward', dr_plot='off', path_plot = 'off', va_plot = 'on')
-#test.sideview_seperate_equators(331)
+
+#test.travel_time([30, np.pi/2, 69 * np.pi/180], direction='forward', dr_plot='off', path_plot = 'on', va_plot = 'off')
+test.travel_time([30, np.pi/2, 69 * np.pi/180], direction='forwards', dr_plot='off', path_plot = 'on', va_plot = 'on')
+#test.sideview_seperate_equators(69)
 #test.plot_rel_effect()
 #test.plot_correction()
-
+#test.multiple_travel_times(direction='backward')
+#test.plot_B_debug_time()

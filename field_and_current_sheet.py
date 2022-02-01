@@ -17,6 +17,7 @@ import scipy
 import scipy.special
 #mpl.rcParams['agg.path.chunksize'] = 10000
 mpl.rcParams['legend.fontsize'] = 10
+plt.rcParams.update({'font.size': 22})
 
 Rj = 7.14e7
 class InternalAndCS:
@@ -64,10 +65,15 @@ class InternalAndCS:
 
     
     def trace_magnetic_field(self, printing = 'off', starting_cordinates = None, one_way = 'off', break_point = 3, step = 0.001, pathing = 'forward'):
+        ''' INPUT PHI IS LH ''' 
+        
         if starting_cordinates == None:
             starting_cordinates = self.starting_cordinates
+        
         coordinates = starting_cordinates
-        coordinates[2] = 2*np.pi - coordinates[2] #changing from LH input to RH
+        #print('start', coordinates[2])
+        #coordinates[2] = 2*np.pi - coordinates[2] #changing from LH input to RH
+        #print('after', coordinates[2])
         points = [] #this is the list that will eventually be plotted
         Br_list = []
         B_list = []
@@ -239,7 +245,8 @@ class InternalAndCS:
     def find_mag_equator(self, point):
 
         print(' \n Starting point = {}'.format(point))
-        points, Br_list = self.trace_magnetic_field(starting_cordinates=point)
+        calc =  self.trace_magnetic_field(starting_cordinates=point)
+        points, Br_list = calc[0], calc[1]
         index = self.find_index_negative(listInput = Br_list)
         def interpolate(i):
             point1 = points[i-1]
@@ -314,8 +321,8 @@ class InternalAndCS:
 
 
 '''
-test = InternalAndCS([30*Rj, np.pi/2, 212* np.pi/180], model = 'VIP4')
-#test.find_mag_equator(point=[30*Rj, np.pi/2, 112* np.pi/180])
+test = InternalAndCS([30*Rj, np.pi/2, 69* np.pi/180], model = 'VIP4')
+#test.find_mag_equator(point=[30*Rj, np.pi/2, 69* np.pi/180])
 #test.plotTrace()
 #test.plotMultipleLines()
 #test.traceFieldEquator()
