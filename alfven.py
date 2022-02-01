@@ -365,7 +365,8 @@ class AlfvenVel:
         plt.show()
     
         
-    def travel_time(self, startpoint = [30, np.pi/2, 212* np.pi/180], direction = 'forward', path_plot = 'off', dr_plot = 'off', print_time = 'on', va_plot ='off'):
+    def travel_time(self, startpoint = [30, np.pi/2, 212* np.pi/180], direction = 'forward', path_plot = 'off', dr_plot = 'off', print_time = 'on', va_plot ='off',b_plot = 'off', n_plot = 'off', 
+    debug_plot = 'off'):
         '''
         Calculate the travel path/time of an alfven wave from a given startpoint to the ionosphere. 
         input startpoint [r, theta, phi] where r is in rj and phi is left handed
@@ -385,6 +386,8 @@ class AlfvenVel:
         rs_rj = rs/Rj
         rs_rj_popped =  rs_rj[rs_rj > 6]
         Bs = np.array(plot_results[2]) / 1e9 # turn nano tesla into T
+        B_along_path = []
+        n_along_path = []
         ''' 
         this returns the path taken (in terms of point by point) taken by the alfven wave (points)
         and the magnetic field at each points (Bs)
@@ -407,6 +410,8 @@ class AlfvenVel:
             magB_start = np.linalg.norm(B_start)
             magB_end = np.linalg.norm(B_end)
             averageB = (magB_end + magB_start)/2
+            B_along_path.append(averageB)
+            
 
             ''' 
             - this part is probably worth checking with Licia/someone (espicially as it keeps returning a time that is too small)
@@ -421,24 +426,17 @@ class AlfvenVel:
                 '''
                 this is where the density problem lies - we need to put a better version of the density in here! 
                 ''' 
-                va = 5e6
+                va = 0.9 * 3e8
                 traveltime = distance/va
                 time += traveltime
                 continue
                 
-            r_cent = r 
-            phi_cent = phi
-            theta_shift = self.help.centrifugal_equator(r, phi)
-            theta_cent = theta + theta_shift
-            
-            scaleheight = self.densityfunctions.scaleheight(r_cent)
-            n_0 = self.radialfunctions.radial_density(r_cent)
-            x_cent, y_cent, z_cent = self.help.sph_to_cart(r_cent, theta_cent, phi_cent)
-            n = self.densityfunctions.density(n_0, z_cent, scaleheight)
+            n = self.densityfunctions.density_sep_equators(r, theta, phi)
             
             if n < 1e4: 
                 n = 1e4
                 ''' CURRENT LOW DENSITY CORRECTION'''
+            n_along_path.append(n)
             va = self.calculator(averageB, n)
             #print(averageB, n)
             va_uncorrected_list.append(va)
@@ -520,6 +518,58 @@ class AlfvenVel:
             plt.figlegend()
             fig.suptitle('Effect of including relativistic correction')
             plt.savefig('images-24-jan-update/va correction effects.png')
+            plt.show()
+        if b_plot == 'on':
+            fig, ax1 = plt.subplots()
+            numbers_b = list(range(len(B_along_path)))
+            
+            ax1.plot(numbers_b, B_along_path, label = 'B along path', color = 'k')
+            ax1.set_xlabel('Point Index')
+            ax1.set_ylabel('B Along Path', color = 'k')
+            ax1.tick_params(axis='y', labelcolor='k')
+            #ax1.legend(loc=0)
+            numbers_r = list(range(len(rs_rj_popped)))
+            ax2 = ax1.twinx() 
+            ax2.plot(numbers_r, rs_rj_popped, label = 'r ($km$)', color = 'c', linestyle ='--')
+            ax2.set_ylabel('Distance From Planet (km)', color = 'c')
+            ax2.tick_params(axis='y', labelcolor='c')
+            #ax2.legend(loc = 1)
+            #plt.legend()
+            plt.show()
+        if n_plot == 'on':
+            fig, ax1 = plt.subplots()
+            numbers_n = list(range(len(n_along_path)))
+            
+            ax1.plot(numbers_n, n_along_path, label = 'n along path', color = 'k')
+            ax1.set_xlabel('Point Index')
+            ax1.set_ylabel('N Along Path', color = 'k')
+            ax1.tick_params(axis='y', labelcolor='k')
+            #ax1.legend(loc=0)
+            numbers_r = list(range(len(rs_rj_popped)))
+            ax2 = ax1.twinx() 
+            ax2.plot(numbers_r, rs_rj_popped, label = 'r ($km$)', color = 'c', linestyle ='--')
+            ax2.set_ylabel('Distance From Planet (km)', color = 'c')
+            ax2.tick_params(axis='y', labelcolor='c')
+            #ax2.legend(loc = 1)
+            #plt.legend()
+            plt.show()
+        if debug_plot == 'on':
+            fig, ax1 = plt.subplots()
+            numbers_b = list(range(len(B_along_path)))
+            
+            ax1.plot(numbers_b, B_along_path, label = 'B along path', color = 'k')
+            ax1.set_xlabel('Point Index')
+            ax1.set_ylabel('B Along Path', color = 'k')
+            ax1.tick_params(axis='y', labelcolor='k')
+            #ax1.legend(loc=0)
+            ax2 = ax1.twinx() 
+            numbers_n = list(range(len(n_along_path)))
+            ax2.plot(numbers_n, n_along_path, label = 'n along path', color = 'b')
+            ax2.set_xlabel('Point Index')
+            ax2.set_ylabel('N Along Path', color = 'b')
+            ax2.tick_params(axis='y', labelcolor='b')
+            #ax2.legend(loc = 1)
+            #plt.legend()
             plt.show()
         return time, va_corrected_list, va_uncorrected_list, plottable_list, rs_km
 
@@ -698,7 +748,7 @@ test = AlfvenVel(numpoints=200)
 #test.topdown_seperate_equators(density = 'on')
 
 #test.travel_time([30, np.pi/2, 69 * np.pi/180], direction='forward', dr_plot='off', path_plot = 'on', va_plot = 'off')
-test.travel_time([30, np.pi/2, 69 * np.pi/180], direction='forwards', dr_plot='off', path_plot = 'on', va_plot = 'on')
+test.travel_time([30, np.pi/2, 69 * np.pi/180], direction='forwards', dr_plot='off', path_plot = 'on', va_plot = 'on', b_plot='off', n_plot= 'on', debug_plot= 'off')
 #test.sideview_seperate_equators(69)
 #test.plot_rel_effect()
 #test.plot_correction()
