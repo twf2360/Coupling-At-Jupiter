@@ -16,6 +16,8 @@ from radial_outflow import radialOutflow
 from matplotlib import ticker, cm
 from field_and_current_sheet import InternalAndCS
 Rj = 7.14 * 10 ** 7
+plt.rcParams.update({'font.size': 22})
+plt.rcParams['legend.fontsize'] = 14
 class DensityHeight:
     def __init__(self, numpoints, start, stop):
         self.radialOutflowFunctions = radialOutflow(28)
@@ -161,27 +163,40 @@ class DensityHeight:
         ''' 
         plots a slice of the density at a certain longitude given by phi_lh (in degrees)
         '''
-        phi_rh = 2*np.pi - (phi_lh * np.pi/180)
-        print(phi_rh)
+        phi_lh_rad = phi_lh * np.pi/180
+        phi_rh = 2*np.pi - phi_lh_rad
+        
+        #print(phi_rh)
         densities = []
         grids, gridz = self.help.makegrid_2d_negatives(200 ,gridsize= self.stop)
 
         r_cent_points = np.linspace(-30, 30, num=200)
         cent_plot_points = []
+        mag_plot_points = []
+
         for point in r_cent_points:
             if point > 0:
                 phi = phi_rh + np.pi 
+                phi_lh_for_calc = phi_lh_rad + np.pi
             else: 
-                phi = phi_rh
+                phi = phi_rh 
+                phi_lh_for_calc = phi_lh_rad
 
-
+            r_mag, theta_mag, phi_mag = self.help.simple_mag_equator(point, np.pi/2, phi_lh_for_calc)
             r_cent, theta_cent, phi_cent = self.help.change_equators(point, np.pi/2, phi)
+            
             z_cent = abs(point) * np.cos(theta_cent)
+            z_mag = abs(point) * np.cos(theta_mag)
 
+            mag_plot_points.append([point, z_mag]) 
             cent_plot_points.append([point, z_cent]) 
         cent_plot_points = np.array(cent_plot_points)
+        mag_plot_points = np.array(mag_plot_points)
 
+        mag_plot_points_t = np.transpose(mag_plot_points)
         cent_plot_points_t = np.transpose(cent_plot_points)
+        spin_eq_plot = np.array([[-30,0], [30,0]])
+        spin_eq_plot_t = np.transpose(spin_eq_plot)
         
         for i in range(len(gridz)):
             print('new row, {} to go'.format(len(gridz)-i))
@@ -206,8 +221,7 @@ class DensityHeight:
         densities_cm = np.array(densities)/1e6
         densities_cm_edits = np.clip(densities_cm, 1e-2, 1e10)
         fig, ax = plt.subplots(figsize = (25,16))
-        lev_exp = np.arange(np.floor(np.log10(densities_cm_edits.min())-1), np.ceil(np.log10(densities_cm_edits.max())+1), step = 0.5)
-        print(lev_exp)
+        lev_exp = np.arange(np.floor(np.log10(densities_cm_edits.min())-1), np.ceil(np.log10(densities_cm_edits.max())+1), step = 0.25)
         levs = np.power(10, lev_exp)
         cont = ax.contourf(grids, gridz, densities_cm_edits, cmap = 'bone', levels = levs, norm=mcolors.LogNorm())#, locator=ticker.LogLocator()) #, levels = 14)
         ax.add_patch(Circle((0,0), 1, color='y', zorder=100, label = "Jupiter"))
@@ -215,17 +229,29 @@ class DensityHeight:
         ax.text(0.95, 0.01, 'SYS III (LH) Longitutude = {}{} '.format(phi_lh, u"\N{DEGREE SIGN}"),
         verticalalignment='bottom', horizontalalignment='right',
         transform=ax.transAxes,
-        color='w', fontsize=15)
-        ax.text(0.05, 0.99, 'SYS III (LH) Longitutude = {}{} '.format(phi_lh + 180, u"\N{DEGREE SIGN}"),
+        color='w', fontsize=16)
+        if phi_lh + 180 > 360:
+            text_degree = phi_lh - 180
+        else:
+            text_degree = phi_lh + 180
+        ax.text(0.05, 0.99, 'SYS III (LH) Longitutude = {}{} '.format(text_degree, u"\N{DEGREE SIGN}"),
         verticalalignment='top', horizontalalignment='left',
         transform=ax.transAxes,
-        color='w', fontsize=15)
+        color='w', fontsize=16)
+        ax.text(0.05, 0.05, 'CML 201 $\u03BB_{III}$',
+        verticalalignment='top', horizontalalignment='left',
+        transform=ax.transAxes,
+        color='w', fontsize=16)
+        
+
         ax.set_xlim(-30,30)
         ax.set_ylim(-15,15)
-        ax.set(xlabel = '$R_J$ \n', ylabel = '$R_J$', title = 'Density Contour Plot for Given longitude')
+        ax.set(xlabel = '$R_J$ \n', ylabel = '$R_J$', title = 'Density Contour Plot for Given longitude') #, title = 'CML 202 $\u03BB_{III}$')
         if lines == 'on':
+            ax.plot(mag_plot_points_t[0], mag_plot_points_t[1], label = 'Magnetic Equator', color = 'm')
             ax.plot(cent_plot_points_t[0], cent_plot_points_t[1], label = 'Centrifugal Equator')
-        fig.colorbar(cont, label = 'Density $(cm^-3)$')
+            ax.plot(spin_eq_plot_t[0], spin_eq_plot_t[1], label = 'Spin Equator')
+        fig.colorbar(cont, label = 'Density $(cm^{-3})$')
         ax.set_aspect('equal', adjustable = 'box')
         ax.legend()
         plt.savefig('images-24-jan-update/density longitude slice.png')
@@ -257,10 +283,11 @@ class DensityHeight:
     
 
 
-
+'''
 
 test = DensityHeight(numpoints= 100, start= 5, stop = 30)
 #test.plotting(scale_height='on', density = 'on')    
 #test.equators_cent_calculated()
 #test.density_sep_equators(30, np.pi/2, 360*np.pi/180)
-test.meridian_slice(159)
+test.meridian_slice(69, lines='on')
+'''

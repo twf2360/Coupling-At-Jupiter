@@ -8,6 +8,8 @@ import sys
 import matplotlib.pyplot as plt
 import json
 from helpful_functions import HelpfulFunctions
+plt.rcParams.update({'font.size': 22})
+plt.rcParams['legend.fontsize'] = 15
 #Magnitude of Jupiter's Magnetic Field at equator in T
 B0 = 4.17 * 10 **-4
 
