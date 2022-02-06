@@ -638,21 +638,23 @@ class AlfvenVel:
         spacing = 2*np.pi/num
         for n in range(num):
             startingPoints.append([30, np.pi/2, n*spacing])
-        fig = plt.figure()
-        ax = fig.gca(projection='3d') # initialise figure
-        colours = ['b','g','r','c','m','k',] # just setting this up for use later
-        legend_elements = [] #MATPLOTLIB IS A PAIN
-        #make the sphere 
-        x,y, z = self.plotter.make_sphere()
-        ax.plot_surface(x, y, z, color = 'yellow', zorder=100, label = 'Jupiter')
-        ax.set_xlim3d(-40, 40)
-        ax.set_ylim3d(-40, 40)
-        ax.set_zlim3d(-40, 40)
-        ax.set_xlabel('$X, R_j$', fontsize=10)
-        ax.set_ylabel('$Y, R_J$', fontsize=10)
+        if plot == 'on':
+            fig = plt.figure()
+            ax = fig.gca(projection='3d') # initialise figure
+            colours = ['b','g','r','c','m','k',] # just setting this up for use later
+            legend_elements = [] #MATPLOTLIB IS A PAIN
+            #make the sphere 
+            x,y, z = self.plotter.make_sphere()
+            ax.plot_surface(x, y, z, color = 'yellow', zorder=100, label = 'Jupiter')
+            ax.set_xlim3d(-40, 40)
+            ax.set_ylim3d(-40, 40)
+            ax.set_zlim3d(-40, 40)
+            ax.set_xlabel('$X, R_j$', fontsize=10)
+            ax.set_ylabel('$Y, R_J$', fontsize=10)
         color_index = 0
         angle_time_dictionary = {}
         for point in startingPoints:
+            print('New Startpoint!')
             point[2] = 2*np.pi - point[2]
             phi_lh = point[2]
             phi_lh_deg = phi_lh * 180/np.pi
@@ -665,19 +667,33 @@ class AlfvenVel:
                 label = '$\u03BB_(III)$ = {}{}, time = {:.0f}mins'.format(phi_lh_deg,u"\N{DEGREE SIGN}", time/60)
                 ax.plot(plot_points_rj[0], plot_points_rj[1], plot_points_rj[2], label = label ,color = colours[color_index])             
                 legend_elements.append(Line2D([0], [0], color=colours[color_index], lw=2, label=label))
-            color_index +=1
-            if color_index > len(colours)-1:
-                color_index = 0
+                color_index +=1
+                if color_index > len(colours)-1:
+                    color_index = 0
         
-        print(angle_time_dictionary)
+        #print(angle_time_dictionary)
         if plot == 'on':
             
             ax.legend(handles=legend_elements, loc = 'upper left')
             plt.show()
         return angle_time_dictionary
 
-    #def plot_angle_vs_time()
-            
+    def plot_angle_vs_time(self, num = 10, direction = "backward"):
+        ''' generate a plot of how the travel time depends with the angle of the starting point. ''' 
+        angles_times = self.multiple_travel_times(num=num, plot='off', direction=direction)
+        #print(angles_times)
+        angles = list(angles_times.keys())
+        times = list(angles_times.values())
+        angles_degree = [x*180/np.pi for x in angles]
+        times_mins = [x/60 for x in times]
+        #print(angles, times)
+        fig, ax = plt.subplots()
+        ax.plot(angles_degree, times_mins)
+        ax.set(xlabel = 'phi $\u03BB_{III}$ (Degrees)', ylabel = 'Time (Minutes)', title ='Effect of Starting longitude In Equatorial Plane on Travel Time')
+        #ax.tick_params(labelright = True)
+        ax.grid()
+        plt.show()
+
     def plot_B_debug_time(self, phi_lh = 69):
         grids, gridz = self.help.makegrid_2d_negatives(200 ,gridsize= self.stop) #CHANGE THIS BACK TO 100 WHEN ITS WORKING
         phi_rh = 360-phi_lh
@@ -748,9 +764,10 @@ test = AlfvenVel(numpoints=200)
 #test.topdown_seperate_equators(density = 'on')
 
 #test.travel_time([30, np.pi/2, 69 * np.pi/180], direction='forward', dr_plot='off', path_plot = 'on', va_plot = 'off')
-test.travel_time([30, np.pi/2, 69 * np.pi/180], direction='forwards', dr_plot='off', path_plot = 'on', va_plot = 'on', b_plot='off', n_plot= 'on', debug_plot= 'off')
+#test.travel_time([30, np.pi/2, 200 * np.pi/180], direction='backward', dr_plot='off', path_plot = 'on', va_plot = 'on', b_plot='on', n_plot= 'on', debug_plot= 'on')
 #test.sideview_seperate_equators(69)
 #test.plot_rel_effect()
 #test.plot_correction()
 #test.multiple_travel_times(direction='backward')
 #test.plot_B_debug_time()
+test.plot_angle_vs_time(num=100)

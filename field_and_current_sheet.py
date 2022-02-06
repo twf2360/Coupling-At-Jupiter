@@ -128,7 +128,10 @@ class InternalAndCS:
             coordinates = np.add(coordinates, change) #add the change to the current co ordinate
             pr, ptheta, pphi = self.help.cart_to_sph(coordinates[0], coordinates[1], coordinates[2]) #change the coordinatres back in spherical
             coordinates = [pr,ptheta,pphi] 
-
+            #print('r, theta, phi = ',coordinates[0]/Rj, coordinates[1] * 180/np.pi, coordinates[2])
+            f = open('points.txt', 'a')
+            f.write('r, colat, phi lh = {}, {}, {} \n'.format(coordinates[0]/Rj, coordinates[1] * 180/np.pi, coordinates[2]))
+            f.close()
             
             if printing == 'on':
                 if (i % 1000) == 0 or i == 1:
@@ -320,10 +323,9 @@ class InternalAndCS:
         return None
 
 
-'''
+
 test = InternalAndCS([30*Rj, np.pi/2, 69* np.pi/180], model = 'VIP4')
 #test.find_mag_equator(point=[30*Rj, np.pi/2, 69* np.pi/180])
-#test.plotTrace()
+test.plotTrace()
 #test.plotMultipleLines()
 #test.traceFieldEquator()
-'''
