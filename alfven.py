@@ -426,16 +426,35 @@ class AlfvenVel:
                 '''
                 this is where the density problem lies - we need to put a better version of the density in here! 
                 ''' 
+                '''
                 va = 0.9 * 3e8
                 traveltime = distance/va
                 time += traveltime
                 continue
+                '''
+                n = 4711117 *np.exp(r - 6)
                 
+                va = self.calculator(averageB, n)
+                #print(averageB, n)
+                va_uncorrected_list.append(va)
+
+                va_corrected = self.relativistic_correction(va)
+                va_corrected_list.append(va)
+                print(n, r, va, va_corrected)
+                
+                
+                traveltime = distance/va_corrected
+                #print('start Point {} \nEnd Point {} \nMidpoint {} \nDifference {} \nDistance {} \nva {} \nTravel time{}\n \n '.format(start_point, end_point, midpoint, difference, distance, va_corrected, traveltime ))
+                time += traveltime
+                continue
             n = self.densityfunctions.density_sep_equators(r, theta, phi)
             
             if n < 1e4: 
                 n = 1e4
                 ''' CURRENT LOW DENSITY CORRECTION'''
+
+            #if r < 6:
+
             n_along_path.append(n)
             va = self.calculator(averageB, n)
             #print(averageB, n)
@@ -475,7 +494,7 @@ class AlfvenVel:
             ax.set_ylabel('$Y, R_J$', fontsize=10)
             fig.suptitle('Field Line for which travel time was calculated using {}'.format(self.model))
             ax.set_title('Start Point = ({:.0f}, {:.1f}{}, {:.1f}{})SYSIII'.format(startpoint[0]/Rj, startpoint[1] * 180/np.pi, u"\N{DEGREE SIGN}", phi_lh * 180/np.pi, u"\N{DEGREE SIGN}"))
-            ax.text(1,2,40, 'time = {:.1f}s (= {:.1f}mins)'.format(time, time/60))
+            ax.text2D(0.05, 0.95, 'time = {:.1f}s (= {:.1f}mins)'.format(time, time/60), transform=ax.transAxes)
 
             #plt.legend()
             plt.savefig('images-24-jan-update/travel_time_trace.png'.format(self.model))
@@ -528,9 +547,9 @@ class AlfvenVel:
             ax1.set_ylabel('B Along Path', color = 'k')
             ax1.tick_params(axis='y', labelcolor='k')
             #ax1.legend(loc=0)
-            numbers_r = list(range(len(rs_rj_popped)))
+            numbers_r = list(range(len(rs_rj)))
             ax2 = ax1.twinx() 
-            ax2.plot(numbers_r, rs_rj_popped, label = 'r ($km$)', color = 'c', linestyle ='--')
+            ax2.plot(numbers_r, rs_rj, label = 'r ($km$)', color = 'c', linestyle ='--')
             ax2.set_ylabel('Distance From Planet (km)', color = 'c')
             ax2.tick_params(axis='y', labelcolor='c')
             #ax2.legend(loc = 1)
@@ -545,9 +564,9 @@ class AlfvenVel:
             ax1.set_ylabel('N Along Path', color = 'k')
             ax1.tick_params(axis='y', labelcolor='k')
             #ax1.legend(loc=0)
-            numbers_r = list(range(len(rs_rj_popped)))
+            numbers_r = list(range(len(rs_rj)))
             ax2 = ax1.twinx() 
-            ax2.plot(numbers_r, rs_rj_popped, label = 'r ($km$)', color = 'c', linestyle ='--')
+            ax2.plot(numbers_r, rs_rj, label = 'r ($km$)', color = 'c', linestyle ='--')
             ax2.set_ylabel('Distance From Planet (km)', color = 'c')
             ax2.tick_params(axis='y', labelcolor='c')
             #ax2.legend(loc = 1)
@@ -571,6 +590,7 @@ class AlfvenVel:
             #ax2.legend(loc = 1)
             #plt.legend()
             plt.show()
+            print(n_along_path[-1])
         return time, va_corrected_list, va_uncorrected_list, plottable_list, rs_km
 
 
@@ -688,8 +708,12 @@ class AlfvenVel:
         times_mins = [x/60 for x in times]
         #print(angles, times)
         fig, ax = plt.subplots()
-        ax.plot(angles_degree, times_mins)
-        ax.set(xlabel = 'phi $\u03BB_{III}$ (Degrees)', ylabel = 'Time (Minutes)', title ='Effect of Starting longitude In Equatorial Plane on Travel Time')
+        ax.plot(angles_degree, times_mins) 
+        if direction == 'forward':
+            endpoint = 'South'
+        else:
+            endpoint = 'North'
+        ax.set(xlabel = 'phi $\u03BB_{III}$ (Degrees)', ylabel = 'Time (Minutes)', title ='Effect of Starting longitude In Equatorial Plane on Travel Time \n Destination: {} Hemsiphere'.format(endpoint))
         #ax.tick_params(labelright = True)
         ax.grid()
         plt.show()
@@ -764,10 +788,10 @@ test = AlfvenVel(numpoints=200)
 #test.topdown_seperate_equators(density = 'on')
 
 #test.travel_time([30, np.pi/2, 69 * np.pi/180], direction='forward', dr_plot='off', path_plot = 'on', va_plot = 'off')
-#test.travel_time([30, np.pi/2, 200 * np.pi/180], direction='backward', dr_plot='off', path_plot = 'on', va_plot = 'on', b_plot='on', n_plot= 'on', debug_plot= 'on')
+test.travel_time([30, np.pi/2, 50 * np.pi/180], direction='backward', dr_plot='off', path_plot = 'on', va_plot = 'on', b_plot='on', n_plot= 'on', debug_plot= 'on')
 #test.sideview_seperate_equators(69)
 #test.plot_rel_effect()
 #test.plot_correction()
 #test.multiple_travel_times(direction='backward')
 #test.plot_B_debug_time()
-test.plot_angle_vs_time(num=100)
+#test.plot_angle_vs_time(num=100)

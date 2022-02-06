@@ -282,10 +282,11 @@ class DensityHeight:
 
     
 
-
+'''
 
 test = DensityHeight(numpoints= 100, start= 5, stop = 30)
 #test.plotting(scale_height='on', density = 'on')    
 #test.equators_cent_calculated()
 #test.density_sep_equators(30, np.pi/2, 360*np.pi/180)
 test.meridian_slice(150, lines='on')
+'''
