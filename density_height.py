@@ -182,8 +182,8 @@ class DensityHeight:
                 phi = phi_rh 
                 phi_lh_for_calc = phi_lh_rad
 
-            r_mag, theta_mag, phi_mag = self.help.simple_mag_equator(point, np.pi/2, phi_lh_for_calc)
-            r_cent, theta_cent, phi_cent = self.help.change_equators(point, np.pi/2, phi)
+            r_mag, theta_mag, phi_mag = self.help.simple_mag_equator(abs(point), np.pi/2, phi_lh_for_calc)
+            r_cent, theta_cent, phi_cent = self.help.change_equators(abs(point), np.pi/2, phi)
             
             z_cent = abs(point) * np.cos(theta_cent)
             z_mag = abs(point) * np.cos(theta_mag)
@@ -246,7 +246,7 @@ class DensityHeight:
 
         ax.set_xlim(-30,30)
         ax.set_ylim(-15,15)
-        ax.set(xlabel = '$R_J$ \n', ylabel = '$R_J$', title = 'Density Contour Plot for Given longitude') #, title = 'CML 202 $\u03BB_{III}$')
+        ax.set(xlabel = ' x($R_J$) \n', ylabel = 'y ($R_J$)', title = 'Density Contour Plot for Given longitude') #, title = 'CML 202 $\u03BB_{III}$')
         if lines == 'on':
             ax.plot(mag_plot_points_t[0], mag_plot_points_t[1], label = 'Magnetic Equator', color = 'm')
             ax.plot(cent_plot_points_t[0], cent_plot_points_t[1], label = 'Centrifugal Equator')
@@ -283,11 +283,9 @@ class DensityHeight:
     
 
 
-'''
 
 test = DensityHeight(numpoints= 100, start= 5, stop = 30)
 #test.plotting(scale_height='on', density = 'on')    
 #test.equators_cent_calculated()
 #test.density_sep_equators(30, np.pi/2, 360*np.pi/180)
-test.meridian_slice(69, lines='on')
-'''
+test.meridian_slice(150, lines='on')
