@@ -72,7 +72,7 @@ class InternalAndCS:
         
         coordinates = starting_cordinates
         #print('start', coordinates[2])
-        #coordinates[2] = 2*np.pi - coordinates[2] #changing from LH input to RH
+        coordinates[2] = 2*np.pi - coordinates[2] #changing from LH input to RH
         #print('after', coordinates[2])
         points = [] #this is the list that will eventually be plotted
         Br_list = []
@@ -301,6 +301,7 @@ class InternalAndCS:
             #print(theta, theta1, theta2, Br_1, Br_2)
             return theta 
         theta = interpolate(index)
+        print(theta)
         r = self.starting_cordinates[0]
         R_rj = r/Rj
         start_phi = self.starting_cordinates[2]
@@ -309,7 +310,7 @@ class InternalAndCS:
         equator_plot = np.array([[-output[0], -output[1], -output[2]],[output[0], output[1], output[2] ]])
         transposed_equator = np.transpose(equator_plot)
         ax.plot(transposed_equator[0], transposed_equator[1], transposed_equator[2], color = 'c', label = 'mag field equator')#, linewidth = 5.0)
-        print(transposed_equator)
+        #print(transposed_equator)
         #plt.legend()
         plt.savefig('images/mag_field_trace_showing_B_equator.png'.format(self.model))
         plt.show()
@@ -323,9 +324,10 @@ class InternalAndCS:
         return None
 
 
-
+'''
 test = InternalAndCS([30*Rj, np.pi/2, 69* np.pi/180], model = 'VIP4')
 #test.find_mag_equator(point=[30*Rj, np.pi/2, 69* np.pi/180])
 test.plotTrace()
 #test.plotMultipleLines()
-#test.traceFieldEquator()
+test.traceFieldEquator()
+'''

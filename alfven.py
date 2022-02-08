@@ -366,10 +366,12 @@ class AlfvenVel:
     
         
     def travel_time(self, startpoint = [30, np.pi/2, 212* np.pi/180], direction = 'forward', path_plot = 'off', dr_plot = 'off', print_time = 'on', va_plot ='off',b_plot = 'off', n_plot = 'off', 
-    debug_plot = 'off'):
+    debug_plot = 'off', nvsrplot = 'off'):
         '''
         Calculate the travel path/time of an alfven wave from a given startpoint to the ionosphere. 
         input startpoint [r, theta, phi] where r is in rj and phi is left handed
+        direction input - 'forward' travels along the magnetic field vector to the southern hemisphere, backward is the reverse 
+
         ''' 
         startpoint[0] = startpoint[0]*Rj
         #startpoint[2] = 2*np.pi - startpoint[0]
@@ -395,7 +397,8 @@ class AlfvenVel:
         time = 0 
         va_uncorrected_list = []
         va_corrected_list = []
-
+        
+        firsttime = 0
         for i in range(len(points)-1):
             start_point = points[i]
             end_point = points[i+1]
@@ -413,21 +416,24 @@ class AlfvenVel:
             B_along_path.append(averageB)
             
 
-            ''' 
-            - this part is probably worth checking with Licia/someone (espicially as it keeps returning a time that is too small)
-            - approximates the alfven velocity by calculating B as halfway between B_start  and B_end 
-                and by calculating n half way between the two points
-            - will also have to add in the approximate function for n inside of Io radius
-            '''
             r, theta, phi = self.help.cart_to_sph(midpoint[0], midpoint[1], midpoint[2])
             r = r/Rj
             
             if r < 6: 
+                if firsttime == 0:
+                    n_at_6 =  self.densityfunctions.density_sep_equators(6, theta, phi)
+                    firsttime == 1
                 '''
                 this is where the density problem lies - we need to put a better version of the density in here! 
                 ''' 
-                va = 0.9 * 3e8
-                traveltime = distance/va
+                
+                n = n_at_6 * np.exp(r - 6)
+                n_along_path.append(n)
+                va = self.calculator(averageB, n)
+                va_uncorrected_list.append(va)
+                va_corrected = self.relativistic_correction(va)
+                va_corrected_list.append(va_corrected)
+                traveltime = distance/va_corrected
                 time += traveltime
                 continue
                 
@@ -442,7 +448,7 @@ class AlfvenVel:
             va_uncorrected_list.append(va)
 
             va_corrected = self.relativistic_correction(va)
-            va_corrected_list.append(va)
+            va_corrected_list.append(va_corrected)
             
             
             traveltime = distance/va_corrected
@@ -475,7 +481,8 @@ class AlfvenVel:
             ax.set_ylabel('$Y, R_J$', fontsize=10)
             fig.suptitle('Field Line for which travel time was calculated using {}'.format(self.model))
             ax.set_title('Start Point = ({:.0f}, {:.1f}{}, {:.1f}{})SYSIII'.format(startpoint[0]/Rj, startpoint[1] * 180/np.pi, u"\N{DEGREE SIGN}", phi_lh * 180/np.pi, u"\N{DEGREE SIGN}"))
-            ax.text(1,2,40, 'time = {:.1f}s (= {:.1f}mins)'.format(time, time/60))
+            #ax.text(1,2,40, 'time = {:.1f}s (= {:.1f}mins)'.format(time, time/60))
+            ax.text2D(0.05, 0.95, 'time = {:.1f}s (= {:.1f}mins)'.format(time, time/60), transform=ax.transAxes)
 
             #plt.legend()
             plt.savefig('images-24-jan-update/travel_time_trace.png'.format(self.model))
@@ -484,16 +491,17 @@ class AlfvenVel:
 
             fig, ax1 = plt.subplots()
             numbers = list(range(len(drs_km)))
+            drs_rj = np.array(drs)/Rj
             
-            ax1.plot(numbers, drs_km, label = 'Distance Between Points (km)', color = 'k')
+            ax1.plot(numbers, drs_rj, label = 'Distance Between Points ($R_j$)', color = 'k')
             ax1.set_xlabel('Point Index')
-            ax1.set_ylabel('Distance Between Points (km)', color = 'k')
+            ax1.set_ylabel('Distance Between Points ($R_j$)', color = 'k')
             ax1.tick_params(axis='y', labelcolor='k')
             #ax1.legend(loc=0)
 
             ax2 = ax1.twinx() 
-            ax2.plot(numbers, rs_km, label = 'r ($km$)', color = 'c', linestyle ='--')
-            ax2.set_ylabel('Distance From Planet (km)', color = 'c')
+            ax2.plot(numbers, rs_rj, label = 'r ($R_j$)', color = 'c', linestyle ='--')
+            ax2.set_ylabel('Distance From Planet ($R_j$)', color = 'c')
             ax2.tick_params(axis='y', labelcolor='c')
             #ax2.legend(loc = 1)
             #plt.legend()
@@ -501,7 +509,8 @@ class AlfvenVel:
         if va_plot == 'on':
             fig, ax1 = plt.subplots()
             numbers = list(range(len(va_corrected_list)))
-            numbers_r = list(range(len(rs_rj_popped)))
+            #numbers_r = list(range(len(rs_rj_popped)))
+            numbers_r = list(range(len(rs_rj)))
             
             ax1.plot(numbers, va_corrected_list, label = '$v_A$ corrected ($ms^{-1}$)', color = 'c')
             ax1.set_xlabel('Point Index')
@@ -510,7 +519,8 @@ class AlfvenVel:
             ax1.plot(numbers, va_uncorrected_list, label = '$v_A$ uncorrected ($ms^{-1}$)', color = 'b', linestyle ='--')
             #ax1.legend()
             ax2 = ax1.twinx() 
-            ax2.plot(numbers_r, rs_rj_popped, label = 'Distance from planet ($R_J$)', color = 'r', linestyle ='-')
+            #ax2.plot(numbers_r, rs_rj_popped, label = 'Distance from planet ($R_J$)', color = 'r', linestyle ='-')
+            ax2.plot(numbers_r, rs_rj, label = 'Distance from planet ($R_J$)', color = 'r', linestyle ='-')
             ax2.set_ylabel('R ($R_J$)', color = 'r')
             ax2.tick_params(axis='y', labelcolor='r')
             #ax2.legend()
@@ -518,23 +528,25 @@ class AlfvenVel:
             plt.figlegend()
             fig.suptitle('Effect of including relativistic correction')
             plt.savefig('images-24-jan-update/va correction effects.png')
+            plt.grid(which='both')
             plt.show()
         if b_plot == 'on':
             fig, ax1 = plt.subplots()
             numbers_b = list(range(len(B_along_path)))
-            
-            ax1.plot(numbers_b, B_along_path, label = 'B along path', color = 'k')
+            B_along_path_nt = np.array(B_along_path) * 1e9
+            ax1.plot(numbers_b, B_along_path_nt, label = 'B along path', color = 'k')
             ax1.set_xlabel('Point Index')
             ax1.set_ylabel('B Along Path', color = 'k')
             ax1.tick_params(axis='y', labelcolor='k')
             #ax1.legend(loc=0)
-            numbers_r = list(range(len(rs_rj_popped)))
+            numbers_r = list(range(len(rs_rj)))
             ax2 = ax1.twinx() 
-            ax2.plot(numbers_r, rs_rj_popped, label = 'r ($km$)', color = 'c', linestyle ='--')
-            ax2.set_ylabel('Distance From Planet (km)', color = 'c')
+            ax2.plot(numbers_r, rs_rj, label = 'r ($R_j$)', color = 'c', linestyle ='--')
+            ax2.set_ylabel('Distance From Planet ($R_j$)', color = 'c')
             ax2.tick_params(axis='y', labelcolor='c')
             #ax2.legend(loc = 1)
             #plt.legend()
+            plt.grid()
             plt.show()
         if n_plot == 'on':
             fig, ax1 = plt.subplots()
@@ -545,9 +557,9 @@ class AlfvenVel:
             ax1.set_ylabel('N Along Path', color = 'k')
             ax1.tick_params(axis='y', labelcolor='k')
             #ax1.legend(loc=0)
-            numbers_r = list(range(len(rs_rj_popped)))
+            numbers_r = list(range(len(rs_rj)))
             ax2 = ax1.twinx() 
-            ax2.plot(numbers_r, rs_rj_popped, label = 'r ($km$)', color = 'c', linestyle ='--')
+            ax2.plot(numbers_r, rs_rj, label = 'r ($km$)', color = 'c', linestyle ='--')
             ax2.set_ylabel('Distance From Planet (km)', color = 'c')
             ax2.tick_params(axis='y', labelcolor='c')
             #ax2.legend(loc = 1)
@@ -571,7 +583,27 @@ class AlfvenVel:
             #ax2.legend(loc = 1)
             #plt.legend()
             plt.show()
-        return time, va_corrected_list, va_uncorrected_list, plottable_list, rs_km
+        if nvsrplot == 'on':
+            fig, ax = plt.subplots()
+            ns_cm = np.array(n_along_path)/1e6
+
+            
+            ax.plot(rs_rj[:-1], ns_cm, label = 'Density Along Alfven Wave Path ($cm^{-3}$)', color = 'k')
+            ax.set_xlabel('r ($R_j$)')
+            ax.set_ylabel('n Along Path', color = 'k')
+            
+            if direction == 'forward':
+                endpoint = 'South'
+            else:
+                endpoint = 'North'
+            ax.set_title('Effect of distance from Jupiter on Density along path taken by Alfven wave \n From $\u03BB_{{III}}$ ({:.0f},{:.0f}{},{:.0f}{}) to: {} Hemsiphere'.format(startpoint[0]/Rj, 180*startpoint[1]/np.pi, u"\N{DEGREE SIGN}"
+             ,180*phi_lh/np.pi, u"\N{DEGREE SIGN}",endpoint))
+            ax.grid(which = 'both')
+            plt.axvline(x=6, label = 'Orbit of Io', color = 'red', linestyle = 'dashed')
+            ax.legend()
+            plt.show()
+
+        return time, va_corrected_list, va_uncorrected_list, plottable_list, rs_km, points
 
 
     def relativistic_correction(self, va):
@@ -630,14 +662,14 @@ class AlfvenVel:
 
         plt.show()
 
-    def multiple_travel_times(self, num = 8, plot = 'on', direction = 'forward'):
+    def multiple_travel_times(self, num = 8, plot = 'on', direction = 'forward', r = 30):
         ''' docstring goes here ''' 
 
         ''' TO START WITH, THIS IS JUST GONNA BE ALL ON ONE PLOT, BUT IT COULD BE EXTENDED TO HAVE THEM ALL ON SEPERATE PLOTS! ''' 
         startingPoints = []
         spacing = 2*np.pi/num
         for n in range(num):
-            startingPoints.append([30, np.pi/2, n*spacing])
+            startingPoints.append([r, np.pi/2, n*spacing])
         if plot == 'on':
             fig = plt.figure()
             ax = fig.gca(projection='3d') # initialise figure
@@ -678,9 +710,9 @@ class AlfvenVel:
             plt.show()
         return angle_time_dictionary
 
-    def plot_angle_vs_time(self, num = 10, direction = "backward"):
+    def plot_angle_vs_time(self, num = 10, direction = "backward", r = 30):
         ''' generate a plot of how the travel time depends with the angle of the starting point. ''' 
-        angles_times = self.multiple_travel_times(num=num, plot='off', direction=direction)
+        angles_times = self.multiple_travel_times(num=num, plot='off', direction=direction, r=r)
         #print(angles_times)
         angles = list(angles_times.keys())
         times = list(angles_times.values())
@@ -689,7 +721,12 @@ class AlfvenVel:
         #print(angles, times)
         fig, ax = plt.subplots()
         ax.plot(angles_degree, times_mins)
-        ax.set(xlabel = 'phi $\u03BB_{III}$ (Degrees)', ylabel = 'Time (Minutes)', title ='Effect of Starting longitude In Equatorial Plane on Travel Time')
+        if direction == 'forward':
+            endpoint = 'South'
+        else:
+            endpoint = 'North'
+        ax.set(xlabel = 'phi $\u03BB_{III}$ (Degrees)', ylabel = 'Time (Minutes)', 
+        title ='Effect of Starting longitude In Equatorial Plane on Travel Time \n From r = {}$R_J$ to Destination: {} Hemsiphere'.format(r,endpoint))
         #ax.tick_params(labelright = True)
         ax.grid()
         plt.show()
@@ -749,25 +786,56 @@ class AlfvenVel:
         plt.savefig('images-24-jan-update/B side slice.png')
         plt.show() 
 
+    def plot_multiple_distances(self, num = 50, direction = 'backward'):
+        overall_distances = []
+        phis = []
+        startingPoints = []
+        spacing = 2*np.pi/num
+        for n in range(num):
+            startingPoints.append([30, np.pi/2, n*spacing])
+            phis.append(n*spacing)
+        for point in startingPoints:
+            print('New Startpoint = ', point)
+            totaldistance = 0
+            calc = self.travel_time(startpoint=point, print_time='off', direction = direction)
+            path_taken = calc[5]
+            for i in range(len(path_taken)-1):
+                start_point = path_taken[i]
+                end_point = path_taken[i+1]
+                difference = end_point - start_point
+                distance = np.linalg.norm(difference)
+                totaldistance += distance
+            overall_distances.append(totaldistance)
+        phis_degrees = np.array(phis) * 180/np.pi
+        overall_distances_km = np.array(overall_distances) / 1e3
+        fig, ax = plt.subplots()
+        ax.plot(phis_degrees, overall_distances_km)
+        if direction == 'forward':
+            endpoint = 'South'
+        else:
+            endpoint = 'North'
+        ax.set(xlabel = 'phi $\u03BB_{III}$ (Degrees)', ylabel = 'Distance (Km)', 
+        title ='Effect of Starting longitude In Equatorial Plane on Distance Travelled By Alfven Waves \n Destination: {} Hemsiphere'.format(endpoint))
+        ax.grid(which = 'both')
+        plt.show()
             
-
 
       
 
 
             
-
-
+'''
 test = AlfvenVel(numpoints=200)
 #test.top_down_matched_equators()
-
 #test.topdown_seperate_equators(density = 'on')
 
 #test.travel_time([30, np.pi/2, 69 * np.pi/180], direction='forward', dr_plot='off', path_plot = 'on', va_plot = 'off')
-#test.travel_time([30, np.pi/2, 200 * np.pi/180], direction='backward', dr_plot='off', path_plot = 'on', va_plot = 'on', b_plot='on', n_plot= 'on', debug_plot= 'on')
+#test.travel_time([9.38, np.pi/2, 200 * np.pi/180], direction='backward', dr_plot='off', path_plot = 'on', va_plot = 'on', b_plot='on', n_plot= 'on', debug_plot= 'on', nvsrplot = 'on')
 #test.sideview_seperate_equators(69)
 #test.plot_rel_effect()
 #test.plot_correction()
 #test.multiple_travel_times(direction='backward')
 #test.plot_B_debug_time()
-test.plot_angle_vs_time(num=100)
+test.plot_angle_vs_time(num=100, r = 14)
+#test.plot_multiple_distances(num = 70)
+'''

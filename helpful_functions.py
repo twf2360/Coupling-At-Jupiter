@@ -6,10 +6,13 @@ This will hopefully be added to as we go!
 import numpy as np 
 import math
 import sys
+from mag_field_models import field_models
 class HelpfulFunctions():
 
-    def __init__(self):
-        pass 
+    def __init__(self, model = 'VIP4'):
+        self.field = field_models()
+        self.model = model
+         
 
     def makegrid_3d(self,NumPoints, gridsize):
         ''' 
@@ -138,6 +141,52 @@ class HelpfulFunctions():
         theta = theta - tilt
         return r, theta, phi
         '''so jupiters mag field is tilted by apporximated 9.6 deg using vip4 towards 200.8 lh longitude '''
+
+
+    def complex_mag_equator(self, r, phi_lh):
+        ''' r in rj, theta colatitude, phi lh in rad''' 
+        #phi =  2 *np.pi - phi_lh #change phi to RH. 
+        phi = phi_lh
+        guesses_degress = np.array([30,40,50,60,70,80,90,100,110,120,130, 140, 150], dtype = float)
+        guesses_radians_1 = guesses_degress * np.pi/180
+        oneDegreeInRadians = 1*np.pi/180
+        def find_swap(angles):
+            #print(angles)
+            b_r_list = []
+            #print(b_r_list)
+            for i in range(len(angles)):
+                B_r, B_theta, B_phi = self.field.Internal_Field(r, angles[i], phi , model=self.model) #calculates the magnetic field due to the internal field in spherical polar that point)
+                B_current = self.field.CAN_sheet(r, angles[i], phi) #calculates the magnetic field due to the current sheet in spherical polar
+                B_notcurrent = np.array([B_r, B_theta, B_phi]) 
+                B_overall = np.add(B_current, B_notcurrent)
+                #print(B_overall[0])
+                b_r_list.append(B_overall[0])
+                #print(B_overall)
+                #print(b_r_list)
+            crossing = np.where(np.diff(np.sign(b_r_list)))[0]
+            b_r_list = []
+            #print(crossing)
+            #print(b_r_list)       
+            return angles[crossing], angles[crossing+1]
+        stop1, stop2 = find_swap(guesses_radians_1)
+
+        #print(stop1*180/np.pi, stop2*180/np.pi)
+        guesses_2 = np.arange(stop1[0], stop2[0] + oneDegreeInRadians, oneDegreeInRadians)
+        #print(guesses_2)
+
+        stop3, stop4 = find_swap(guesses_2)
+        #print(stop3*180/np.pi, stop4*180/np.pi)
+        guesses_3 = np.arange(stop3, stop4+ 0.1* oneDegreeInRadians, 0.1*oneDegreeInRadians )
+        answer_low, answer_high = find_swap(guesses_3)
+        answer = (answer_high + answer_low) /2
+        #print(answer_low*180/np.pi, answer_high*180/np.pi)
+        #print(answer[0]*180/np.pi)
+        return answer[0]
+    
+    
+    
+    
+    
     '''
     #################################### NOTE ######################################
     THE TWO BELOW FUNCTIONS SHOULDN'T BE USED - i don't think they are effective, however i am loathe to delete them jic
@@ -164,4 +213,7 @@ class HelpfulFunctions():
 
 
         
-
+'''
+test = HelpfulFunctions()
+#print(test.complex_mag_equator(20,249))
+'''

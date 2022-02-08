@@ -159,7 +159,7 @@ class DensityHeight:
         plt.savefig('images/equators.png')
         plt.show()
 
-    def meridian_slice(self, phi_lh, lines = 'off'):
+    def meridian_slice(self, phi_lh, lines = 'off', num = 200):
         ''' 
         plots a slice of the density at a certain longitude given by phi_lh (in degrees)
         '''
@@ -170,9 +170,10 @@ class DensityHeight:
         densities = []
         grids, gridz = self.help.makegrid_2d_negatives(200 ,gridsize= self.stop)
 
-        r_cent_points = np.linspace(-30, 30, num=200)
+        r_cent_points = np.linspace(-30, 30, num=num)
         cent_plot_points = []
         mag_plot_points = []
+        r_centtheta_magtheta_dict = {}
 
         for point in r_cent_points:
             if point > 0:
@@ -181,12 +182,22 @@ class DensityHeight:
             else: 
                 phi = phi_rh 
                 phi_lh_for_calc = phi_lh_rad
+            if -1 < point <1: 
+                continue 
 
-            r_mag, theta_mag, phi_mag = self.help.simple_mag_equator(abs(point), np.pi/2, phi_lh_for_calc)
+            #r_mag, theta_mag_S, phi_mag = self.help.simple_mag_equator(abs(point), np.pi/2, phi_lh_for_calc)
+            theta_mag_colat = self.help.complex_mag_equator(abs(point),  phi_lh_for_calc)
+            #print(theta_mag_colat, theta_mag_S)
+            #print(point, phi_lh_for_calc)
+            #print(point, theta_mag_colat,  (np.pi/2) - theta_mag_colat )
+            theta_mag = np.pi/2 - (theta_mag_colat -np.pi/2)
+            #print(theta_mag_colat,theta_mag)
             r_cent, theta_cent, phi_cent = self.help.change_equators(abs(point), np.pi/2, phi)
+            r_centtheta_magtheta_dict[point] = [theta_cent, theta_mag]
             
             z_cent = abs(point) * np.cos(theta_cent)
             z_mag = abs(point) * np.cos(theta_mag)
+            #print(point,theta_cent, theta_mag)
 
             mag_plot_points.append([point, z_mag]) 
             cent_plot_points.append([point, z_cent]) 
@@ -199,7 +210,7 @@ class DensityHeight:
         spin_eq_plot_t = np.transpose(spin_eq_plot)
         
         for i in range(len(gridz)):
-            print('new row, {} to go'.format(len(gridz)-i))
+            #print('new row, {} to go'.format(len(gridz)-i))
             
             density_row = []
             for j in range(len(grids)):
@@ -256,6 +267,7 @@ class DensityHeight:
         ax.legend()
         plt.savefig('images-24-jan-update/density longitude slice.png')
         plt.show() 
+        return r_centtheta_magtheta_dict
         
 
 
@@ -280,7 +292,24 @@ class DensityHeight:
         return n 
 
 
-    
+    def equator_comparison_mag_cent(self, phi = 200, num = 200):
+        r_thetas_dict = self.meridian_slice(phi_lh = phi, num= num)
+        r_thetas_dict_positive_only = {k: v for (k, v) in r_thetas_dict.items() if k >= 6}
+        #print(r_thetas_dict_positive_only)
+        rs = list(r_thetas_dict_positive_only.keys())
+        thetas_c_m = list(r_thetas_dict_positive_only.values())
+        divided_thetas = []
+        for i in thetas_c_m:
+            divided_thetas.append((np.pi/2-i[0])/(np.pi/2-i[1]))
+        fig, ax = plt.subplots()
+        ax.plot(rs, divided_thetas)
+        ax.set(xlabel = 'r ($R_j$)', ylabel = r'$ \theta_c / \theta_m$', 
+        title ='Difference Between magnetic and centrifugal equator \n dependence on difference from planet at $\u03BB_{{III}}$ longitude {}{}'.format(phi, u"\N{DEGREE SIGN}")),
+        #ylim = (0.9,1))
+        ax.grid(which = 'both')
+        plt.show()
+
+
 
 
 
@@ -288,4 +317,6 @@ test = DensityHeight(numpoints= 100, start= 5, stop = 30)
 #test.plotting(scale_height='on', density = 'on')    
 #test.equators_cent_calculated()
 #test.density_sep_equators(30, np.pi/2, 360*np.pi/180)
-test.meridian_slice(150, lines='on')
+#test.meridian_slice(20.8, lines='on')
+
+test.equator_comparison_mag_cent(20.8, num=500)
