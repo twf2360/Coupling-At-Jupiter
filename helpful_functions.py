@@ -7,6 +7,7 @@ import numpy as np
 import math
 import sys
 from mag_field_models import field_models
+Rj = 7.14e7
 class HelpfulFunctions():
 
     def __init__(self, model = 'VIP4'):
@@ -145,8 +146,8 @@ class HelpfulFunctions():
 
     def complex_mag_equator(self, r, phi_lh):
         ''' r in rj, theta colatitude, phi lh in rad''' 
-        #phi =  2 *np.pi - phi_lh #change phi to RH. 
-        phi = phi_lh
+        phi =  2 *np.pi - phi_lh #change phi to RH. 
+        #phi = phi_lh
         guesses_degress = np.array([30,40,50,60,70,80,90,100,110,120,130, 140, 150], dtype = float)
         guesses_radians_1 = guesses_degress * np.pi/180
         oneDegreeInRadians = 1*np.pi/180
@@ -171,7 +172,7 @@ class HelpfulFunctions():
         stop1, stop2 = find_swap(guesses_radians_1)
 
         #print(stop1*180/np.pi, stop2*180/np.pi)
-        guesses_2 = np.arange(stop1[0], stop2[0] + oneDegreeInRadians, oneDegreeInRadians)
+        guesses_2 = np.arange(stop1, stop2 + oneDegreeInRadians, oneDegreeInRadians)
         #print(guesses_2)
 
         stop3, stop4 = find_swap(guesses_2)
@@ -183,7 +184,21 @@ class HelpfulFunctions():
         #print(answer[0]*180/np.pi)
         return answer[0]
     
-    
+
+    def calc_furthest_r(self, points):
+        ''' calc L shell ''' 
+        rs = []
+        for point in points:
+            x = point[0]
+            y = point[1]
+            z = point[y]
+            rs.append(np.sqrt(x**2 + y**2 + z**2))
+        largest_r = max(rs)
+        largest_r_rj = largest_r/Rj
+        return largest_r_rj
+       
+
+  
     
     
     
@@ -215,5 +230,5 @@ class HelpfulFunctions():
         
 '''
 test = HelpfulFunctions()
-#print(test.complex_mag_equator(20,249))
+print(test.complex_mag_equator(10,111*np.pi/180) * 180/np.pi)
 '''

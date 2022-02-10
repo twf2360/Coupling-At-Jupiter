@@ -42,6 +42,19 @@ class DensityHeight:
         n = n_0 * np.exp(-z/H)
         return n
 
+    def density_same_equators(self,r, theta, coord_system = 'LH'):
+        '''
+        returns the density if the centrifugal equator lies on the spin equator 
+        INPUT LEFT HANDED OR RIGHT HANDED COORDINATE SYSTEM 
+        BUT I DON'T THINK PHI MATTERSD ANYWAY
+
+        '''
+
+        n_0 = self.radialfunctions.radial_density(r)
+        z = r*np.cos(theta)
+        scaleheight = self.scaleheight(r)
+        den = self.densityfunctions.density(n_0, z, scaleheight)
+        return den
     def plotting(self, density = 'on',scale_height = 'off'):
         radii, n_0s = self.radialOutflowFunctions.plotRadialDensity(start=self.start, end = self.stop, numpoints=self.numpoints)
         zs =  np.linspace(self.start, self.stop, self.numpoints)
@@ -159,7 +172,7 @@ class DensityHeight:
         plt.savefig('images/equators.png')
         plt.show()
 
-    def meridian_slice(self, phi_lh, lines = 'off', num = 200):
+    def meridian_slice(self, phi_lh, lines = 'off', num = 200, show = 'on'):
         ''' 
         plots a slice of the density at a certain longitude given by phi_lh (in degrees)
         '''
@@ -192,7 +205,7 @@ class DensityHeight:
             #print(point, theta_mag_colat,  (np.pi/2) - theta_mag_colat )
             theta_mag = np.pi/2 - (theta_mag_colat -np.pi/2)
             #print(theta_mag_colat,theta_mag)
-            r_cent, theta_cent, phi_cent = self.help.change_equators(abs(point), np.pi/2, phi)
+            r_cent, theta_cent, phi_cent = self.help.change_equators(abs(point), np.pi/2, phi_lh_for_calc)
             r_centtheta_magtheta_dict[point] = [theta_cent, theta_mag]
             
             z_cent = abs(point) * np.cos(theta_cent)
@@ -225,7 +238,7 @@ class DensityHeight:
                     density_row.append(n)
                     continue
                 theta = np.arctan2(s,z)
-                n = self.density_sep_equators(r, theta, phi)
+                n = self.density_sep_equators(r, theta, phi_lh_rad)
                 density_row.append(n)
             densities.append(density_row)
         
@@ -237,7 +250,7 @@ class DensityHeight:
         cont = ax.contourf(grids, gridz, densities_cm_edits, cmap = 'bone', levels = levs, norm=mcolors.LogNorm())#, locator=ticker.LogLocator()) #, levels = 14)
         ax.add_patch(Circle((0,0), 1, color='y', zorder=100, label = "Jupiter"))
         ax.add_patch(Circle((0,0), 6, color='c', zorder=90, label = "Io Orbital Radius"))
-        ax.text(0.95, 0.01, 'SYS III (LH) Longitutude = {}{} '.format(phi_lh, u"\N{DEGREE SIGN}"),
+        ax.text(0.95, 0.01, 'SYS III (LH) Longitutude = {:.1f}{} '.format(phi_lh, u"\N{DEGREE SIGN}"),
         verticalalignment='bottom', horizontalalignment='right',
         transform=ax.transAxes,
         color='w', fontsize=16)
@@ -245,7 +258,7 @@ class DensityHeight:
             text_degree = phi_lh - 180
         else:
             text_degree = phi_lh + 180
-        ax.text(0.05, 0.99, 'SYS III (LH) Longitutude = {}{} '.format(text_degree, u"\N{DEGREE SIGN}"),
+        ax.text(0.05, 0.99, 'SYS III (LH) Longitutude = {:.1f}{} '.format(text_degree, u"\N{DEGREE SIGN}"),
         verticalalignment='top', horizontalalignment='left',
         transform=ax.transAxes,
         color='w', fontsize=16)
@@ -266,8 +279,9 @@ class DensityHeight:
         ax.set_aspect('equal', adjustable = 'box')
         ax.legend()
         plt.savefig('images-24-jan-update/density longitude slice.png')
-        plt.show() 
-        return r_centtheta_magtheta_dict
+        if show == 'on':
+            plt.show() 
+        return r_centtheta_magtheta_dict, grids, gridz, densities_cm_edits, levs, mag_plot_points_t, cent_plot_points_t, spin_eq_plot_t
         
 
 
@@ -277,7 +291,7 @@ class DensityHeight:
 
     def density_sep_equators(self, r, theta, phi):
         ''' 
-        Input r, theta (colatitude), phi (rh), in right handed sysII co-ordiantes
+        Input r, theta (colatitude), phi (lh)
         returns mass density, taking into account the difference between spin and centrifugal equators. 
         '''
         r_cent = r 
@@ -290,6 +304,12 @@ class DensityHeight:
         n = self.density(n_0, abs(z_cent), scaleheight)
 
         return n 
+
+    def density_within_6(self, r, theta, phi_lh, n_at_6):
+        ''' r in rj '''
+        n = n_at_6 * np.exp(r - 6)
+        return n
+        
 
 
     def equator_comparison_mag_cent(self, phi = 200, num = 200):
@@ -309,14 +329,60 @@ class DensityHeight:
         ax.grid(which = 'both')
         plt.show()
 
+    def field_line_on_contour(self, phi_lh, r = 30):
+        ''' input phi lh in deg '''
+        phi_lh_rad = phi_lh*np.pi/180
+        fig, ax = plt.subplots(figsize = (25,16))
+        results= self.meridian_slice(phi_lh = phi_lh, show = 'off', lines = 'on')
+        grids, gridz, densities, levs, mag_plot, cent_plot, spin_plot = results[1], results[2], results[3], results[4], results[5], results[6], results[7]
+        cont = ax.contourf(grids, gridz, densities, cmap = 'bone', levels = levs, norm=mcolors.LogNorm())
+        fig.colorbar(cont, label = 'Density $(cm^{-3})$')
+        theta = np.pi/2
+        plot_results = self.tracing.trace_magnetic_field(starting_cordinates=[r*Rj, theta ,phi_lh_rad], one_way='off', break_point=2, step = 0.001)
+        points = np.array(plot_results[0])
+        plottable_list = np.transpose(points)
+        plottable_list_rj = plottable_list/Rj
+        xs = plottable_list_rj[0]
+        ys = plottable_list_rj[1]
+        zs = plottable_list_rj[2]
+        ss = []
+        for i in range(len(xs)):
+            ss.append(np.sqrt(xs[i]**2 + ys[i]**2))
+        ax.plot(ss,zs, label = 'Field Line', Color = 'm')
+        ax.plot(mag_plot[0], mag_plot[1], label = 'Magnetic Equator', color = 'y')
+        ax.plot(cent_plot[0], cent_plot[1], label = 'Centrifugal Equator')
+        ax.plot(spin_plot[0], spin_plot[1], label = 'Spin Equator')
+        ax.add_patch(Circle((0,0), 1, color='y', zorder=100, label = "Jupiter"))
+        ax.add_patch(Circle((0,0), 6, color='c', zorder=90, label = "Io Orbital Radius"))
+        ax.text(0.95, 0.01, 'SYS III (LH) Longitutude = {:.1f}{} '.format(phi_lh, u"\N{DEGREE SIGN}"),
+        verticalalignment='bottom', horizontalalignment='right',
+        transform=ax.transAxes,
+        color='w', fontsize=16)
+        ax.set_xlim(-30,30)
+        ax.set_ylim(-15,15)
+        if phi_lh + 180 > 360:
+            text_degree = phi_lh - 180
+        else:
+            text_degree = phi_lh + 180
+        ax.text(0.05, 0.99, 'SYS III (LH) Longitutude = {:.1f}{} '.format(text_degree, u"\N{DEGREE SIGN}"),
+        verticalalignment='top', horizontalalignment='left',
+        transform=ax.transAxes,
+        color='w', fontsize=16)
+        ax.text(0.05, 0.05, 'CML 201 $\u03BB_{III}$',
+        verticalalignment='top', horizontalalignment='left',
+        transform=ax.transAxes,
+        color='w', fontsize=16)
+        ax.set_aspect('equal', adjustable = 'box')
+        ax.legend()
+        plt.show()
 
 
-
-
+'''
 test = DensityHeight(numpoints= 100, start= 5, stop = 30)
 #test.plotting(scale_height='on', density = 'on')    
 #test.equators_cent_calculated()
 #test.density_sep_equators(30, np.pi/2, 360*np.pi/180)
-#test.meridian_slice(20.8, lines='on')
-
-test.equator_comparison_mag_cent(20.8, num=500)
+#test.meridian_slice(200.8, lines='on')
+test.field_line_on_contour(200.8)
+#test.equator_comparison_mag_cent(200.8, num=500)
+'''

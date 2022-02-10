@@ -129,10 +129,12 @@ class InternalAndCS:
             pr, ptheta, pphi = self.help.cart_to_sph(coordinates[0], coordinates[1], coordinates[2]) #change the coordinatres back in spherical
             coordinates = [pr,ptheta,pphi] 
             #print('r, theta, phi = ',coordinates[0]/Rj, coordinates[1] * 180/np.pi, coordinates[2])
+            '''
+            i am keeping the next three lines in memorandum the absolute choas they caused. 
             f = open('points.txt', 'a')
             f.write('r, colat, phi lh = {}, {}, {} \n'.format(coordinates[0]/Rj, coordinates[1] * 180/np.pi, coordinates[2]))
             f.close()
-            
+            '''
             if printing == 'on':
                 if (i % 1000) == 0 or i == 1:
                     print('B cartesian = {}, B sph = [{} {} {}]'.format(B, B_r, B_theta, B_phi))
@@ -246,6 +248,7 @@ class InternalAndCS:
         return x, y, z
 
     def find_mag_equator(self, point):
+        ''' input phi is lh '''
 
         print(' \n Starting point = {}'.format(point))
         calc =  self.trace_magnetic_field(starting_cordinates=point)
@@ -301,7 +304,7 @@ class InternalAndCS:
             #print(theta, theta1, theta2, Br_1, Br_2)
             return theta 
         theta = interpolate(index)
-        print(theta)
+        print(theta*180/np.pi)
         r = self.starting_cordinates[0]
         R_rj = r/Rj
         start_phi = self.starting_cordinates[2]
@@ -323,11 +326,10 @@ class InternalAndCS:
                 return i
         return None
 
-
 '''
-test = InternalAndCS([30*Rj, np.pi/2, 69* np.pi/180], model = 'VIP4')
-#test.find_mag_equator(point=[30*Rj, np.pi/2, 69* np.pi/180])
-test.plotTrace()
+test = InternalAndCS([30*Rj, np.pi/2, 111* np.pi/180], model = 'VIP4')
+test.find_mag_equator(point=[30*Rj, np.pi/2, 111* np.pi/180])
+#test.plotTrace()
 #test.plotMultipleLines()
 test.traceFieldEquator()
 '''
