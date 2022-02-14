@@ -60,7 +60,7 @@ class radialOutflow:
         #radial cross sectional area of plasma torus
         A = z * 2 * np.pi * r * Rj
 
-        v =  mdot/(n*self.avgIonMass*A)
+        v =  mdot/(n*self.avgIonMass*A/1.67e-27)
         return v
 
     def radial_density(self, r):

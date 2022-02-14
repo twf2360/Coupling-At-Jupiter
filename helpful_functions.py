@@ -191,7 +191,7 @@ class HelpfulFunctions():
         for point in points:
             x = point[0]
             y = point[1]
-            z = point[y]
+            z = point[2]
             rs.append(np.sqrt(x**2 + y**2 + z**2))
         largest_r = max(rs)
         largest_r_rj = largest_r/Rj
