@@ -368,8 +368,8 @@ class AlfvenVel:
     
         
     def travel_time(self, startpoint = [30, np.pi/2, 212* np.pi/180], direction = 'forward', path_plot = 'off', dr_plot = 'off', print_time = 'on',
-     va_plot ='off',b_plot = 'off', n_plot = 'off', vvsrplot = 'off', uncorrected_vvsr = 'on',
-    debug_plot = 'off', nvsrplot = 'off'):
+     va_plot ='off',b_plot = 'off', n_plot = 'off', vvsrplot = 'off', uncorrected_vvsr = 'off',
+    debug_plot = 'off', nvsrplot = 'off', equators = 'unmatched'):
         '''
         Calculate the travel path/time of an alfven wave from a given startpoint to the ionosphere. 
         input startpoint [r, theta, phi] where r is in rj and phi is left handed in RADIANS
@@ -427,7 +427,10 @@ class AlfvenVel:
             
             if r < 6: 
                 if firsttime == 0:
-                    n_at_6 =  self.densityfunctions.density_sep_equators(6, theta, phi_lh)
+                    if equators == 'unmatched':
+                        n_at_6 =  self.densityfunctions.density_sep_equators(6, theta, phi_lh)
+                    if equators == 'matched':
+                        n_at_6 =  self.densityfunctions.density_same_equators(6, theta)
                     firsttime == 1
                 '''
                 this is where the density problem lies - we need to put a better version of the density in here! 
@@ -442,8 +445,10 @@ class AlfvenVel:
                 traveltime = distance/va_corrected
                 time += traveltime
                 continue
-                
-            n = self.densityfunctions.density_sep_equators(r, theta, phi_lh)
+            if equators =='unmatched':    
+                n = self.densityfunctions.density_sep_equators(r, theta, phi_lh)
+            if equators =='matched':    
+                n = self.densityfunctions.density_same_equators(r, theta)
             #print(n)
             
             if n < 1e4: 
@@ -849,7 +854,7 @@ class AlfvenVel:
         ax.grid(which = 'both')
         plt.show()
 
-    def multiple_travel_times_both_directions(self, num = 8, r = 10):
+    def multiple_travel_times_both_directions(self, num = 8, r = 10, equators = 'unmatched'):
         ''' docstring goes here ''' 
 
         ''' TO START WITH, THIS IS JUST GONNA BE ALL ON ONE PLOT, BUT IT COULD BE EXTENDED TO HAVE THEM ALL ON SEPERATE PLOTS! ''' 
@@ -859,25 +864,25 @@ class AlfvenVel:
             startingPoints.append([r, np.pi/2, n*spacing])
         angle_time_dictionary = {}
         for point in startingPoints:
-            print('New Startpoint!')
-            point[2] = 2*np.pi - point[2]
+            print('New Startpoint, ', point)
             phi_lh = point[2]
             phi_lh_deg = phi_lh * 180/np.pi
-            calc_f = self.travel_time(startpoint=point, print_time='on', direction = 'forward')
+            calc_f = self.travel_time(startpoint=point, print_time='on', direction = 'forward', equators=equators)
             print('point after calc f', point)
             point[0] = point[0]/Rj
+            point[2] = 2*np.pi - point[2]
             print('amended point', point)
             #print('got here, calc_f 0 =', calc_f[0], ' point = ' ,point)
-            calc_b = self.travel_time(startpoint=point, print_time='on', direction = 'backward')
+            calc_b = self.travel_time(startpoint=point, print_time='on', direction = 'backward', equators=equators)
             time_f = calc_f[0]
             time_b = calc_b[0]
             time = time_b + time_f
             angle_time_dictionary[phi_lh] = time
         return angle_time_dictionary        
 
-    def plot_angle_vs_time_btoh_directions(self, num = 10, r = 10):
+    def plot_angle_vs_time_btoh_directions(self, num = 10, r = 10, equators = 'unmatched'):
         ''' generate a plot of how the travel time depends with the angle of the starting point. ''' 
-        angles_times = self.multiple_travel_times_both_directions(num=num, r=r)
+        angles_times = self.multiple_travel_times_both_directions(num=num, r=r, equators=equators)
         #print(angles_times)
         angles = list(angles_times.keys())
         times = list(angles_times.values())
@@ -887,12 +892,12 @@ class AlfvenVel:
         fig, ax = plt.subplots()
         ax.plot(angles_degree, times_mins)
         ax.set(xlabel = 'phi $\u03BB_{III}$ (Degrees)', ylabel = 'Time (Minutes)', 
-        title ='Effect of Starting longitude In Equatorial Plane on Travel Time \n From r = {}$R_J$ '.format(r))
+        title ='Effect of Starting longitude In Equatorial Plane on Travel Time along a field line \n That reaches r = {}$R_J$ in the equatorial plane'.format(r))
         #ax.tick_params(labelright = True)
         ax.grid()
         plt.show()
 
-    def plot_multiple_distances_both_directions(self, num = 50, r = 10):
+    def plot_multiple_distances_both_directions(self, num = 50, r = 10, equators = 'unmatched'):
         overall_distances = []
         phis = []
         startingPoints = []
@@ -903,12 +908,13 @@ class AlfvenVel:
         for point in startingPoints:
             print('New Startpoint = ', point)
             totaldistance = 0
-            calc_f = self.travel_time(startpoint=point, print_time='on', direction = 'forward')
+            calc_f = self.travel_time(startpoint=point, print_time='on', direction = 'forward', equators=equators)
             print('point after calc f', point)
             point[0] = point[0]/Rj
+            point[2] = 2*np.pi - point[2]
             print('amended point', point)
             #print('got here, calc_f 0 =', calc_f[0], ' point = ' ,point)
-            calc_b = self.travel_time(startpoint=point, print_time='on', direction = 'backward')
+            calc_b = self.travel_time(startpoint=point, print_time='on', direction = 'backward', equators=equators)
             path_taken_f = calc_f[5]
             path_taken_b = calc_b[5]
             for i in range(len(path_taken_f)-1):
@@ -929,7 +935,7 @@ class AlfvenVel:
         fig, ax = plt.subplots()
         ax.plot(phis_degrees, overall_distances_km)
         ax.set(xlabel = 'phi $\u03BB_{III}$ (Degrees)', ylabel = 'Distance (Km)', 
-        title ='Effect of Starting longitude In Equatorial Plane on Distance Travelled By Alfven Waves \n From r = {}Rj'.format(r))
+        title ='Effect of Starting longitude In Equatorial Plane on Distance Travelled By Alfven Waves \n Along A field line passes through r = {}Rj in equatorial plane'.format(r))
         ax.grid(which = 'both')
         plt.show()
 
@@ -1052,14 +1058,14 @@ class AlfvenVel:
         plt.savefig('images-24-jan-update/v outflow vs VA equatorial')
         plt.show()
 
-test = AlfvenVel(numpoints=200)
+#test = AlfvenVel(numpoints=200, model='dipole')
 #test.top_down_matched_equators()
 #test.topdown_seperate_equators(density = 'on')
 #test.plot_radial_outflow_countour(mdot =500)
 #test.plot_outflow_vs_alfven(mdot = 500, equators='matched')
 #test.travel_time([30, np.pi/2, 69 * np.pi/180], direction='forward', dr_plot='off', path_plot = 'on', va_plot = 'off')
-test.travel_time([10, np.pi/2, 200.8 * np.pi/180], direction='forward', dr_plot='off', path_plot = 'off', va_plot = 'off', b_plot='off', n_plot= 'off', 
-debug_plot= 'off', nvsrplot = 'on', vvsrplot = 'on', uncorrected_vvsr = 'on')
+#test.travel_time([10, np.pi/2, 200.8 * np.pi/180], direction='forward', dr_plot='off', path_plot = 'off', va_plot = 'off', b_plot='off', n_plot= 'off', 
+#debug_plot= 'off', nvsrplot = 'on', vvsrplot = 'on', uncorrected_vvsr = 'on')
 #test.sideview_seperate_equators(111)
 #test.plot_rel_effect()
 #test.plot_correction()
@@ -1067,6 +1073,6 @@ debug_plot= 'off', nvsrplot = 'on', vvsrplot = 'on', uncorrected_vvsr = 'on')
 #test.plot_B_debug_time()
 #test.plot_angle_vs_time(num=100, r = 14)
 #test.plot_multiple_distances(num = 70)
-#test.plot_angle_vs_time_btoh_directions(r=10, num=50)
-#test.plot_multiple_distances_both_directions(num=50, r=10)
+#test.plot_angle_vs_time_btoh_directions(r=10, num=70, equators = 'matched')
+#test.plot_multiple_distances_both_directions(num=50, r=10, equators='matched')
 #test.plot_outflow_vs_alfven(mdot = 500, gridsize = 80, model='VIP4', cansheet = 'off', equators = 'unmatched')

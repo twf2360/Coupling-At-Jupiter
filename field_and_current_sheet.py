@@ -333,12 +333,11 @@ class InternalAndCS:
         points = np.array(plot_results[0])
         furthest_r = self.help.calc_furthest_r(points)
         return furthest_r
-'''
+
 test = InternalAndCS([30*Rj, np.pi/2, 111* np.pi/180], model = 'VIP4')
 #test.find_mag_equator(point=[30*Rj, np.pi/2, 111* np.pi/180])
 #test.plotTrace()
 #test.plotMultipleLines()
 #test.traceFieldEquator()
-print(test.find_furthest_r_single_input([30*Rj, np.pi/2, 200.8*np.pi/180]))
+print(test.find_furthest_r_single_input([10*Rj, np.pi/2, 290.8*np.pi/180]))
 
-'''
