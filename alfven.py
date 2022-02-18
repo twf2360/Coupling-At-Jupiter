@@ -98,14 +98,16 @@ class AlfvenVel:
         ax.add_patch(Circle((0,0), 1, color='y', zorder=100, label = "Jupiter"))
         ax.add_patch(Circle((0,0), 6, color='c', zorder=90, label = "Io Orbital Radius"))
         ax.legend()
-        ax.set_xlim(-30,30)
-        ax.set_ylim(-30,30)
+        ax.set_xlim(-self.stop,self.stop)
+        ax.set_ylim(-self.stop,self.stop)
         degrees = theta * 180 /np.pi
-        ax.set(xlabel = 'x $(R_J)$', ylabel = 'y $(R_J)$', title = 'alfven velocity in the colatitude = {:.0f}{} plane'.format(degrees, u"\N{DEGREE SIGN}"))
+        ax.set(xlabel = 'x $(R_J)$', ylabel = 'y $(R_J)$', title = 'alfven velocity in the colatitude = {:.0f}{} plane for aligned spin and centrifugal equators'.format(degrees, u"\N{DEGREE SIGN}"))
         fig.colorbar(cont, label = '$V_a (km)$')
         ax.set_aspect('equal', adjustable = 'box')
+        for r in np.arange(0, 115, 5):
+            ax.add_patch(Circle((0,0), r, fill = False, color = 'lightgreen'))
         plt.savefig('images-24-jan-update/va_topdown.png')
-        plt.show() 
+        #plt.show() 
 
     def topdown_seperate_equators(self, spin_eq = 'on', density = 'off'):
         '''
@@ -195,9 +197,9 @@ class AlfvenVel:
         ax.add_patch(Circle((0,0), 1, color='y', zorder=100, label = "Jupiter"))
         ax.add_patch(Circle((0,0), 6, color='c', zorder=90, label = "Io Orbital Radius"))
         ax.legend()
-        ax.set_xlim(-30,30)
-        ax.set_ylim(-30,30)
-        ax.set(xlabel = 'x $(R_J)$ ', ylabel = 'y $(R_J)$', title = 'alfven velocity in the spin plane, taking centrifugal equator into account')
+        ax.set_xlim(-self.stop,self.stop)
+        ax.set_ylim(-self.stop,self.stop)
+        ax.set(xlabel = 'x $(R_J)$ ', ylabel = 'y $(R_J)$', title = 'alfven velocity in the spin plane, spin and centrifugal equators not aligned')
         fig.colorbar(cont, label = '$V_a (km)$')
         ax.set_aspect('equal', adjustable = 'box')
         plt.savefig('images-24-jan-update/va_topdown_inc_cent.png')
@@ -984,7 +986,7 @@ class AlfvenVel:
 
         '''
         theta = np.pi/2
-        gridx, gridy = self.help.makegrid_2d_negatives(200 ,gridsize= gridsize)
+        gridx, gridy = self.help.makegrid_2d_negatives(400 ,gridsize= gridsize)
         vOutflows = []
         vas = []
         va_over_outflow = []
@@ -1049,7 +1051,7 @@ class AlfvenVel:
         ax.add_patch(Circle((0,0), 6.2, color='c', zorder=90, label = "Io Orbital Radius"))
         ax.set_xlim(-gridsize,gridsize)
         ax.set_ylim(-gridsize,gridsize)
-        for r in np.arange(0, gridsize, 5):
+        for r in np.arange(0, 115, 5):
             ax.add_patch(Circle((0,0), r, fill = False, color = 'lightgreen'))
         ax.set(xlabel = 'X $(R_J)$ \n', ylabel = 'Y $(R_J)$', title = 'Radial Outflow vs Alfven Velocity in Equatorial Plane \n mdot = {}, equators = {}'.format(mdot, equators))
         fig.colorbar(cont, label = ' Alfven Velocity / Radial Velocity', ticks = levs)
@@ -1058,9 +1060,126 @@ class AlfvenVel:
         plt.savefig('images-24-jan-update/v outflow vs VA equatorial')
         plt.show()
 
-#test = AlfvenVel(numpoints=200, model='dipole')
+    def diverge_rel_correction(self, startpoint = [10, np.pi/2, 200.8* np.pi/180], direction = 'forward', rtol = 0.05):
+        calc = self.travel_time(startpoint=startpoint, direction=direction)
+        points = calc[5]
+        corrected = calc[1]
+        uncorrected = calc[2]
+        diverge_index = self.find_index_diverge(corrected, uncorrected, rtol=rtol)
+        
+        diverge_point = points[diverge_index]
+        diverge_point_sph = self.help.cart_to_sph(diverge_point[0], diverge_point[1], diverge_point[2])
+        diverge_r = diverge_point_sph[0]/Rj
+        diverge_colatitude = diverge_point_sph[1] * 180/np.pi
+        print(diverge_r)
+        return diverge_point, points, diverge_index
+    def find_index_diverge(self, corrected, uncorrected, rtol):
+            for i in range(len(corrected)):
+                if not np.isclose(corrected[i], uncorrected[i], rtol=rtol):
+                    print(i)
+                    return i 
+
+    
+    def visualise_rel_correction_single_point(self, startpoint = [10, np.pi/2, 200.8* np.pi/180]):
+        calc = self.diverge_rel_correction(startpoint=startpoint)
+        diverge_point = calc[0]
+        points = calc[1]
+        diverge_index = calc[2]
+        
+        fig, ax = plt.subplots()
+        ax.add_patch(Circle((0,0), 1, color='y', zorder=100, label = "Jupiter"))
+        ax.add_patch(Circle((0,0), 6.2, color='c', zorder=90, label = "Io Orbital Radius", fill = False))
+        pre_diverge_points = points[:diverge_index]
+        post_diverge_points = points[diverge_index:]
+        pre_plottable = np.transpose(pre_diverge_points)
+        pre_plottable_rj = pre_plottable/Rj
+        pre_xs = pre_plottable_rj[0]
+        pre_ys = pre_plottable_rj[1]
+        pre_zs = pre_plottable_rj[2]
+        print(len(pre_xs), len(pre_ys), len(pre_zs))
+        pre_ss = []
+        post_plottable = np.transpose(post_diverge_points)
+        post_plottable_rj = post_plottable/Rj
+        post_xs = post_plottable_rj[0]
+        post_ys = post_plottable_rj[1]
+        post_zs = post_plottable_rj[2]
+        post_ss = []
+        for i in range(len(pre_xs)):
+            #phi = np.arctan2(ys[i],xs[i]) 
+            pre_ss.append(np.sqrt(pre_xs[i]**2 + pre_ys[i]**2)) #* np.cos(phi - phi_lh_rad )) #np.cos(phi - phi_rh_rad )
+        for i in range(len(post_xs)):
+            #phi = np.arctan2(ys[i],xs[i]) 
+            post_ss.append(np.sqrt(post_xs[i]**2 + post_ys[i]**2)) #* np.cos(phi - phi_lh_rad )) #np.cos(phi - phi_rh_rad )
+        
+        ax.plot(pre_ss, pre_zs, label = 'Field Line Before Correction Matters', Color = 'm')
+        ax.plot(post_ss, post_zs, label = 'Field Line When Correction Matters', Color = 'b')
+        ax.legend()
+        plt.show()
+    
+    def relativistic_correction_area_of_impact_2d(self, phi_lh_deg, equators = 'matched' ,rtol = 0.01, numpoints = 200):
+        ''' 
+        plot the areas in which the relativistic correction has an impact on the alfven velocity
+        Inputs:
+        phi_lh_deg - the longitude you want to view in left handed sysIII, in degrees
+        equators - input either "matched" or "unmatched". if equators = "matched", then spin and centrifugal equators are aligned. If "unmatched" centrifugal equator is 
+                   seperately calculated
+        rtol = the relative tolerance between uncorrected and corrected alfven velocity to define where the correction has an impact, default 1%
+        '''
+        
+        phi_lh_rad = phi_lh_deg * np.pi/180
+        
+        ''' first define grid of points at which the velocities will be calculated ''' 
+        grids, gridz = self.help.makegrid_2d_negatives(numpoints ,gridsize= 30)
+        
+        
+        va_uncorrected = []
+        va_corrected = []
+        firsttime = 0 #this is just used so that we only have to work out density at r = 6 once. 
+        for i in range(len(gridz)):
+            print('new row, {} to go'.format(len(gridz)-i))
+            va_uncorrected_row = []
+            va_corrected_row = []
+
+            for j in range(len(grids)):
+                
+                ''' for each point in the grid, work out the co-ordinates in spherical polar ''' 
+
+                z = gridz[i][j]
+                s = grids[i][j]
+
+                r = np.sqrt(z**2 + s**2)
+                phi = phi_lh_rad
+                theta = np.arctan2(s,z)
+
+
+                ''' things are a bit more awkward in the r<6 range and so is calculated seperately '''
+                if r < 6: 
+                    if firsttime == 0:
+                        if equators == 'unmatched':
+                            n_at_6 =  self.densityfunctions.density_sep_equators(6, theta, phi)
+                        if equators == 'matched':
+                            n_at_6 =  self.densityfunctions.density_same_equators(6, theta)
+                        firsttime == 1
+                    
+                    n = self.densityfunctions.density_within_6(r, theta, phi, n_at_6) #in order to change the density profile within 6rj, this is what should be changed. 
+                    
+                    
+                    va = self.calculator(averageB, n)
+                    va_uncorrected_row.append(va)
+                    va_corrected = self.relativistic_correction(va)
+                    va_corrected_row.append(va_corrected)
+
+
+
+
+
+
+    #def relativistic_correction_area_of_impact_3d(self)
+
+test = AlfvenVel(numpoints=400, model='VIP4', stop = 80)
 #test.top_down_matched_equators()
 #test.topdown_seperate_equators(density = 'on')
+#test.top_down_matched_equators()
 #test.plot_radial_outflow_countour(mdot =500)
 #test.plot_outflow_vs_alfven(mdot = 500, equators='matched')
 #test.travel_time([30, np.pi/2, 69 * np.pi/180], direction='forward', dr_plot='off', path_plot = 'on', va_plot = 'off')
@@ -1075,4 +1194,6 @@ class AlfvenVel:
 #test.plot_multiple_distances(num = 70)
 #test.plot_angle_vs_time_btoh_directions(r=10, num=70, equators = 'matched')
 #test.plot_multiple_distances_both_directions(num=50, r=10, equators='matched')
-#test.plot_outflow_vs_alfven(mdot = 500, gridsize = 80, model='VIP4', cansheet = 'off', equators = 'unmatched')
+#test.plot_outflow_vs_alfven(mdot = 500, gridsize = 80, model='VIP4', cansheet = 'on', equators = 'matched')
+#test.diverge_rel_correction()
+test.visualise_rel_correction_single_point()
