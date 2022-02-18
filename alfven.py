@@ -1025,6 +1025,9 @@ class AlfvenVel:
                 B_x, B_y, B_z = self.help.Bsph_to_Bcart(B_overall[0], B_overall[1], B_overall[2], r, theta, phi)
                 B = np.array([B_x, B_y, B_z])
                 B = B/(1e9) #CHRIS code outputs nT
+                '''
+                ISSUE MAY BE HERE AS THE MANGITUDE OF B IS NOT TAKEN? - nope the calculator expects this.
+                '''
                 va = self.calculator(B, n)
                 va_corrected = self.relativistic_correction(va)
                 Vas_row.append(va_corrected)
@@ -1135,6 +1138,7 @@ class AlfvenVel:
         va_uncorrected = []
         va_corrected = []
         firsttime = 0 #this is just used so that we only have to work out density at r = 6 once. 
+        ''' the two for loops below calculate the uncorrected and corrected alfven velocity for every point in the grid ''' 
         for i in range(len(gridz)):
             print('new row, {} to go'.format(len(gridz)-i))
             va_uncorrected_row = []
@@ -1153,6 +1157,7 @@ class AlfvenVel:
 
 
                 ''' things are a bit more awkward in the r<6 range and so is calculated seperately '''
+                ''' first calculate density, then magnetic field, then alfven velocity, then corrected alfven velocity ''' 
                 if r < 6: 
                     if firsttime == 0:
                         if equators == 'unmatched':
@@ -1162,12 +1167,66 @@ class AlfvenVel:
                         firsttime == 1
                     
                     n = self.densityfunctions.density_within_6(r, theta, phi, n_at_6) #in order to change the density profile within 6rj, this is what should be changed. 
+                    ''' use chris' mag field models code to add the magnetic field from the internally generated field and the current sheet ''' 
+                    B_r, B_theta, B_phi = self.field.Internal_Field(r, theta, phi, model=self.model) #calculates the magnetic field due to the internal field in spherical polar that point)
+                    B_current = self.field.CAN_sheet(r, theta, phi) #calculates the magnetic field due to the current sheet in spherical polar
+                    B_notcurrent = np.array([B_r, B_theta, B_phi]) 
+                    B_overall = np.add(B_current, B_notcurrent)
+                    B_x, B_y, B_z = self.help.Bsph_to_Bcart(B_overall[0], B_overall[1], B_overall[2], r, theta, phi)
                     
-                    
-                    va = self.calculator(averageB, n)
+                    B = np.array([B_x, B_y, B_z])
+                    B_tesla = B/(1e9) #CHRIS code outputs nT
+                    va = self.calculator(B_tesla, n)
                     va_uncorrected_row.append(va)
                     va_corrected = self.relativistic_correction(va)
                     va_corrected_row.append(va_corrected)
+                    continue #after its calculated for r<6 back to the top of the loop
+            
+                ''' if r>6, then density and mangetic field calculated in the same manner ''' 
+                if equators =='unmatched':    
+                    n = self.densityfunctions.density_sep_equators(r, theta, phi_lh)
+                if equators =='matched':    
+                    n = self.densityfunctions.density_same_equators(r, theta)
+                #print(n)
+
+                B_r, B_theta, B_phi = self.field.Internal_Field(r, theta, phi, model=self.model) #calculates the magnetic field due to the internal field in spherical polar that point)
+                B_current = self.field.CAN_sheet(r, theta, phi) #calculates the magnetic field due to the current sheet in spherical polar
+                B_notcurrent = np.array([B_r, B_theta, B_phi]) 
+                B_overall = np.add(B_current, B_notcurrent)
+                B_x, B_y, B_z = self.help.Bsph_to_Bcart(B_overall[0], B_overall[1], B_overall[2], r, theta, phi)
+                
+                B = np.array([B_x, B_y, B_z])
+                B_tesla = B/(1e9) #CHRIS code outputs nT
+                va = self.calculator(B_tesla, n)
+                va_uncorrected_row.append(va)
+                va_corrected = self.relativistic_correction(va)
+                va_corrected_row.append(va_corrected)
+            va_uncorrected.append(va_uncorrected_row)
+            va_corrected.append(va_corrected_row)
+
+        ''' np.isclose() works with array_like objects. will return a list similar to [[True, True, True, False...]]. hopefully works with nested arrays? '''
+        ''' then turn all Trues into 1, all False into 0 ''' 
+
+        are_close = np.isclose(va_corrected, va_uncorrected)    
+        ''' this will turn the false and trues into 0s and 1s ''' 
+        are_close = are_close*1
+
+        ''' plot ''' 
+        fig, ax = plt.subplots()
+        
+        cont = ax.contourf(grids, gridz, are_close, cmap = 'pastel2',levels = [0,0.9])#levels = levs, # norm=mcolors.LogNorm())# locator=ticker.LogLocator())
+        ax.add_patch(Circle((0,0), 1, color='y', zorder=100, label = "Jupiter"))
+        ax.add_patch(Circle((0,0), 6.2, color='c', zorder=90, label = "Io Orbital Radius", fill = False))
+        ax.set_xlim(-30,30)
+        ax.set_ylim(-30,30)
+        for r in np.arange(0, 45, 5):
+            ax.add_patch(Circle((0,0), r, fill = False, color = 'lightgreen'))
+        ax.set(xlabel = 'X $(R_J)$ \n', ylabel = 'Y $(R_J)$', title = 'Radial Outflow vs Alfven Velocity in Equatorial Plane \n mdot = {}, equators = {}'.format(mdot, equators))
+        #fig.colorbar(cont, label = ' Alfven Velocity / Radial Velocity', ticks = levs)
+        ax.set_aspect('equal', adjustable = 'box')
+        ax.legend()
+        plt.savefig('images-24-jan-update/where va correction matterss 2d')
+        plt.show()
 
 
 
