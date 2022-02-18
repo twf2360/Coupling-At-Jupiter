@@ -305,7 +305,7 @@ class DensityHeight:
 
     def density_within_6(self, r, theta, phi_lh, n_at_6):
         ''' r in rj '''
-        n = n_at_6 * np.exp(r - 6) * abs((np.cos(theta)))
+        n = n_at_6 * np.exp(r - 6) #* abs((np.cos(theta)))
         return n
         
 

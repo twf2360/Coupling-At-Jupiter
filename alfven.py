@@ -23,7 +23,7 @@ plt.rcParams.update({'font.size': 22})
 plt.rcParams['legend.fontsize'] = 14
 Rj = 7.14 * (10 ** 7)
 mu_0 = 1.25663706212 * 10 ** -6
-
+personal_cmap = ['deeppink', 'magenta', 'darkmagenta' ,'darkorchid', 'indigo','midnightblue', 'darkblue', 'slateblue', 'dodgerblue', 'deepskyblue',  'aqua', 'aquamarine' ]
 class AlfvenVel:
     def __init__(self, avgIonMass =28,numpoints= 5000, start = 0, stop = 30, model = 'VIP4',):
         self.start =start
@@ -108,6 +108,7 @@ class AlfvenVel:
             ax.add_patch(Circle((0,0), r, fill = False, color = 'lightgreen'))
         plt.savefig('images-24-jan-update/va_topdown.png')
         #plt.show() 
+        return Vas
 
     def topdown_seperate_equators(self, spin_eq = 'on', density = 'off'):
         '''
@@ -218,7 +219,7 @@ class AlfvenVel:
             ax.set_aspect('equal', adjustable = 'box')
             plt.savefig('images-24-jan-update/va_topdown_inc_cent.png')
             plt.show() 
-
+        return Vas
 
     def sideview_seperate_equators(self,phi_lh, lines = 'off'):
 
@@ -978,6 +979,7 @@ class AlfvenVel:
         ax.legend()
         plt.savefig('images-24-jan-update/v outflow equatorial')
         plt.show() 
+        return vOutflows
 
     def plot_outflow_vs_alfven(self, mdot, equators = 'matched', gridsize = 20, model = 'VIP4', cansheet = 'off'):
         ''' 
@@ -1063,7 +1065,7 @@ class AlfvenVel:
         plt.savefig('images-24-jan-update/v outflow vs VA equatorial')
         plt.show()
 
-    def diverge_rel_correction(self, startpoint = [10, np.pi/2, 200.8* np.pi/180], direction = 'forward', rtol = 0.05):
+    def diverge_rel_correction(self, startpoint = [10, np.pi/2, 200.8* np.pi/180], direction = 'forward', rtol = 0.01):
         calc = self.travel_time(startpoint=startpoint, direction=direction)
         points = calc[5]
         corrected = calc[1]
@@ -1083,8 +1085,8 @@ class AlfvenVel:
                     return i 
 
     
-    def visualise_rel_correction_single_point(self, startpoint = [10, np.pi/2, 200.8* np.pi/180]):
-        calc = self.diverge_rel_correction(startpoint=startpoint)
+    def visualise_rel_correction_single_point(self, startpoint = [10, np.pi/2, 200.8* np.pi/180], rtol = 0.01):
+        calc = self.diverge_rel_correction(startpoint=startpoint, rtol = rtol)
         diverge_point = calc[0]
         points = calc[1]
         diverge_index = calc[2]
@@ -1116,6 +1118,8 @@ class AlfvenVel:
         
         ax.plot(pre_ss, pre_zs, label = 'Field Line Before Correction Matters', Color = 'm')
         ax.plot(post_ss, post_zs, label = 'Field Line When Correction Matters', Color = 'b')
+        ax.set_title('Path of Field Line Showing Where the relativisitc effect becomes important \n Tolerance = {}%'.format(rtol * 100))
+        ax.set_aspect('equal', adjustable = 'box')
         ax.legend()
         plt.show()
     
@@ -1136,13 +1140,14 @@ class AlfvenVel:
         
         
         va_uncorrected = []
-        va_corrected = []
-        firsttime = 0 #this is just used so that we only have to work out density at r = 6 once. 
+        va_corrected_list = []
+         
         ''' the two for loops below calculate the uncorrected and corrected alfven velocity for every point in the grid ''' 
         for i in range(len(gridz)):
             print('new row, {} to go'.format(len(gridz)-i))
             va_uncorrected_row = []
             va_corrected_row = []
+            firsttime = 0 #this is just used so that we only have to work out density at r = 6 once.
 
             for j in range(len(grids)):
                 
@@ -1199,43 +1204,194 @@ class AlfvenVel:
                 B_tesla = B/(1e9) #CHRIS code outputs nT
                 va = self.calculator(B_tesla, n)
                 va_uncorrected_row.append(va)
-                va_corrected = self.relativistic_correction(va)
-                va_corrected_row.append(va_corrected)
+                corrected_va = self.relativistic_correction(va)
+                va_corrected_row.append(corrected_va)
             va_uncorrected.append(va_uncorrected_row)
-            va_corrected.append(va_corrected_row)
+            va_corrected_list.append(va_corrected_row)
 
         ''' np.isclose() works with array_like objects. will return a list similar to [[True, True, True, False...]]. hopefully works with nested arrays? '''
         ''' then turn all Trues into 1, all False into 0 ''' 
 
-        are_close = np.isclose(va_corrected, va_uncorrected)    
+        are_close = np.isclose(va_uncorrected, va_corrected, rtol = rtol)    
         ''' this will turn the false and trues into 0s and 1s ''' 
         are_close = are_close*1
 
         ''' plot ''' 
+        '''
         fig, ax = plt.subplots()
-        
-        cont = ax.contourf(grids, gridz, are_close, cmap = 'pastel2',levels = [0,0.9])#levels = levs, # norm=mcolors.LogNorm())# locator=ticker.LogLocator())
+        plt.gca().patch.set_color('.25')
+        #print(are_close)
+
+        cont = ax.contourf(grids, gridz, are_close, cmap = 'hot',levels = [0.2,0.9])#levels = levs, # norm=mcolors.LogNorm())# locator=ticker.LogLocator())
+
         ax.add_patch(Circle((0,0), 1, color='y', zorder=100, label = "Jupiter"))
         ax.add_patch(Circle((0,0), 6.2, color='c', zorder=90, label = "Io Orbital Radius", fill = False))
         ax.set_xlim(-30,30)
         ax.set_ylim(-30,30)
         for r in np.arange(0, 45, 5):
             ax.add_patch(Circle((0,0), r, fill = False, color = 'lightgreen'))
-        ax.set(xlabel = 'X $(R_J)$ \n', ylabel = 'Y $(R_J)$', title = 'Radial Outflow vs Alfven Velocity in Equatorial Plane \n mdot = {}, equators = {}'.format(mdot, equators))
-        #fig.colorbar(cont, label = ' Alfven Velocity / Radial Velocity', ticks = levs)
-        ax.set_aspect('equal', adjustable = 'box')
+        ax.set(xlabel = 'X $(R_J)$ \n', ylabel = 'Y $(R_J)$', title = 'Where does Correction for alfven velocity matter \n  equators = {}, rtol = {}'.format(equators, rtol))
+        fig.colorbar(cont) 
+        
         ax.legend()
         plt.savefig('images-24-jan-update/where va correction matterss 2d')
         plt.show()
+        '''
+        ''' plot v2 ''' 
+        divided = np.array(va_corrected_list)/np.array(va_uncorrected)
+        fig, ax = plt.subplots()
+        plt.gca().patch.set_color('.25')
+        #print(are_close)
 
+        cont = ax.contourf(grids, gridz, divided, levels = [0,0.5,0.6,0.7,0.8,0.9,0.95,0.96,0.97,0.98,0.99,1], colors = personal_cmap)#levels = [0.2,0.9])#levels = levs, # norm=mcolors.LogNorm())# locator=ticker.LogLocator())
 
+        ax.add_patch(Circle((0,0), 1, color='y', zorder=100, label = "Jupiter"))
+        ax.add_patch(Circle((0,0), 6.2, color='c', zorder=90, label = "Io Orbital Radius", fill = False))
+        ax.set_xlim(-30,30)
+        ax.set_ylim(-30,30)
+        for r in np.arange(0, 45, 5):
+            ax.add_patch(Circle((0,0), r, fill = False, color = 'lightgreen'))
+        ax.set(xlabel = ' $(R_J)$ \n', ylabel = ' $(R_J)$', title = 'Corrected/Uncorrected Alfven velocity in phi = {:.0f} plane \n  equators = {}'.format(phi_lh_deg, equators, rtol))
+        fig.colorbar(cont) 
+        ax.set_aspect('equal', adjustable = 'box')
+        ax.legend()
+        plt.savefig('images-24-jan-update/where va correction matters 2d v2')
+        plt.show()
+
+    def relativistic_correction_area_of_impact_topdown(self,equators = 'matched'):
+        ''' 
+        equators = 'matched' - spin and centrifgual axis are the same
+                 = 'unmatched' - spin and centrfigugal equators matched. 
+
+        '''
+        theta = np.pi/2
+        gridx, gridy = self.help.makegrid_2d_negatives(200 ,gridsize= 30)
+        va_uncorrected_list = []
+        va_corrected_list = []
+        va_corrected_over_uncorrected = []
+        
+        for i in range(len(gridy)):
+            print('new row, {} to go'.format(len(gridx)-i))
+            va_uncorrected_row = []
+            va_corrected_row = []
+            va_corrected_over_uncorrected_row = []
+            firsttime = 0 #this is just used so that we only have to work out density at r = 6 once.
+            for j in range(len(gridx)):
+                x = gridx[i][j]
+                y = gridy[i][j]
+                r = np.sqrt(x**2 + y**2)
+                phi = np.arctan2(y,x)
+                if r < 6:
+                    if firsttime == 0:
+                        if equators == 'unmatched':
+                            n_at_6 =  self.densityfunctions.density_sep_equators(6, theta, phi)
+                        if equators == 'matched':
+                            n_at_6 =  self.densityfunctions.density_same_equators(6, theta)
+                        firsttime == 1
+                    
+                    n = self.densityfunctions.density_within_6(r, theta, phi, n_at_6) #in order to change the density profile within 6rj, this is what should be changed. 
+                    ''' use chris' mag field models code to add the magnetic field from the internally generated field and the current sheet ''' 
+                    B_r, B_theta, B_phi = self.field.Internal_Field(r, theta, phi, model=self.model) #calculates the magnetic field due to the internal field in spherical polar that point)
+                    B_current = self.field.CAN_sheet(r, theta, phi) #calculates the magnetic field due to the current sheet in spherical polar
+                    B_notcurrent = np.array([B_r, B_theta, B_phi]) 
+                    B_overall = np.add(B_current, B_notcurrent)
+                    B_x, B_y, B_z = self.help.Bsph_to_Bcart(B_overall[0], B_overall[1], B_overall[2], r, theta, phi)
+                    B = np.array([B_x, B_y, B_z])
+                    B_tesla = B/(1e9) #CHRIS code outputs nT
+                    va = self.calculator(B_tesla, n)
+                    va_uncorrected_row.append(va)
+                    va_corrected = self.relativistic_correction(va)
+                    va_corrected_row.append(va_corrected)
+                    divided = va_corrected/va
+                    va_corrected_over_uncorrected_row.append(divided)
+                    continue
+
+                if equators == 'matched':
+                    n = self.densityfunctions.density_same_equators(r, theta)
+                 
+                if equators == 'unmatched':
+                    n = self.densityfunctions.density_sep_equators(r, theta, phi)
+                
+                B_r, B_theta, B_phi = self.field.Internal_Field(r, theta, phi, model='VIP4') #calculates the magnetic field due to the internal field in spherical polar that point)
+                B_current = self.field.CAN_sheet(r, theta, phi) #calculates the magnetic field due to the current sheet in spherical polar
+                B_notcurrent = np.array([B_r, B_theta, B_phi]) 
+                B_overall = np.add(B_current, B_notcurrent) #adds up the total magnetic field 
+                B_x, B_y, B_z = self.help.Bsph_to_Bcart(B_overall[0], B_overall[1], B_overall[2], r, theta, phi)
+                B = np.array([B_x, B_y, B_z])
+                B = B/(1e9) #CHRIS code outputs nT
+                va = self.calculator(B, n)
+                va_uncorrected_row.append(va)
+                va_corrected = self.relativistic_correction(va)
+                va_corrected_row.append(va_corrected)
+                divided = va_corrected/va
+                va_corrected_over_uncorrected_row.append(divided)
+            va_corrected_list.append(va_corrected_row)
+            va_uncorrected_list.append(va_uncorrected_row)
+            va_corrected_over_uncorrected.append(va_corrected_over_uncorrected_row)
+        
+        fig, ax = plt.subplots()
+        plt.gca().patch.set_color('.25')
+
+        cont = ax.contourf(gridx, gridy, va_corrected_over_uncorrected, levels = [0,0.5,0.6,0.7,0.8,0.9,0.95,0.96,0.97,0.98,0.99,1], colors = personal_cmap)#levels = [0.2,0.9])#levels = levs, # norm=mcolors.LogNorm())# locator=ticker.LogLocator())
+
+        ax.add_patch(Circle((0,0), 1, color='y', zorder=100, label = "Jupiter"))
+        ax.add_patch(Circle((0,0), 6.2, color='k', zorder=90, label = "Io Orbital Radius", fill = False))
+        ax.set_xlim(-30,30)
+        ax.set_ylim(-30,30)
+        for r in np.arange(0, 45, 5):
+            ax.add_patch(Circle((0,0), r, fill = False, color = 'firebrick'))
+        ax.set(xlabel = ' $(R_J)$ \n', ylabel = ' $(R_J)$', title = 'Corrected/Uncorrected Alfven velocity in equatorial plane \n  equators = {}'.format(equators))
+        fig.colorbar(cont) 
+        ax.set_aspect('equal', adjustable = 'box')
+        ax.legend()
+        plt.savefig('images-24-jan-update/where va correction matters 2d topdown')
+        plt.show()
+
+            
+        #outflows_km= np.array(vOutflows)/1e3
+        #va_over_outflow = [va/vo for va,vo in zip(vas,vOutflows)]
+        #va_over_outflow = []
+        
+        
+
+        fig, ax = plt.subplots(figsize = (25,16))
+        #lev_exp = np.arange(np.floor(np.log10(np.min(va_over_outflow))-1), np.ceil(np.log10(np.max(va_over_outflow))+1), step = 0.25)
+        #levs = np.power(10, lev_exp)
+        
+
+    def outflow_vs_alfven_v2(self,  mdot, equators = 'matched', gridsize = 80, model = 'VIP4'):
+        outflows = np.array(self.plot_radial_outflow_countour(mdot= mdot))
+        if equators == 'matched':
+            alfven = np.array(self.top_down_matched_equators())
+        if equators == 'unmatched':
+            alfven = np.array(self.spin_eq_topdown())
+        gridx, gridy = self.help.makegrid_2d_negatives(200 ,gridsize= gridsize)
+        divided = np.divide(alfven, outflows)
+        print(divided)
+        #np.savetxt('divided.txt', divided)
+        fig, ax = plt.subplots(figsize = (25,16))
+        levs = [0,0.25,0.5,0.75,0.8,0.9,1,1.1,1.2,1.25,1.50,1.75,2,5]#, np.max(va_over_outflow)]
+        plt.gca().patch.set_color('.25')
+        cont = ax.contourf(gridx, gridy, divided, cmap = 'seismic',norm = DivergingNorm(vcenter = 1), levels = levs)#levels = levs, # norm=mcolors.LogNorm())# locator=ticker.LogLocator())
+        ax.add_patch(Circle((0,0), 1, color='y', zorder=100, label = "Jupiter"))
+        ax.add_patch(Circle((0,0), 6.2, color='c', zorder=90, label = "Io Orbital Radius"))
+        ax.set_xlim(-gridsize,gridsize)
+        ax.set_ylim(-gridsize,gridsize)
+        for r in np.arange(0, 115, 5):
+            ax.add_patch(Circle((0,0), r, fill = False, color = 'lightgreen'))
+        ax.set(xlabel = 'X $(R_J)$ \n', ylabel = 'Y $(R_J)$', title = 'Radial Outflow vs Alfven Velocity in Equatorial Plane \n mdot = {}, equators = {}'.format(mdot, equators))
+        fig.colorbar(cont, label = ' Alfven Velocity / Radial Velocity', ticks = levs)
+        ax.set_aspect('equal', adjustable = 'box')
+        ax.legend()
+        plt.savefig('images-24-jan-update/v outflow vs VA equatorial v2')
+        plt.show()
 
 
 
 
     #def relativistic_correction_area_of_impact_3d(self)
 
-test = AlfvenVel(numpoints=400, model='VIP4', stop = 80)
+test = AlfvenVel(numpoints=200, model='VIP4', stop = 80)
 #test.top_down_matched_equators()
 #test.topdown_seperate_equators(density = 'on')
 #test.top_down_matched_equators()
@@ -1255,4 +1411,7 @@ test = AlfvenVel(numpoints=400, model='VIP4', stop = 80)
 #test.plot_multiple_distances_both_directions(num=50, r=10, equators='matched')
 #test.plot_outflow_vs_alfven(mdot = 500, gridsize = 80, model='VIP4', cansheet = 'on', equators = 'matched')
 #test.diverge_rel_correction()
-test.visualise_rel_correction_single_point()
+#test.visualise_rel_correction_single_point()
+#test.relativistic_correction_area_of_impact_2d(200.8)
+#test.relativistic_correction_area_of_impact_topdown()
+test.outflow_vs_alfven_v2(mdot = 500)
