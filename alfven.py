@@ -372,7 +372,7 @@ class AlfvenVel:
         
     def travel_time(self, startpoint = [30, np.pi/2, 212* np.pi/180], direction = 'forward', path_plot = 'off', dr_plot = 'off', print_time = 'on',
      va_plot ='off',b_plot = 'off', n_plot = 'off', vvsrplot = 'off', uncorrected_vvsr = 'off',
-    debug_plot = 'off', nvsrplot = 'off', equators = 'unmatched'):
+    debug_plot = 'off', nvsrplot = 'off', equators = 'unmatched', break_point = 2):
         '''
         Calculate the travel path/time of an alfven wave from a given startpoint to the ionosphere. 
         input startpoint [r, theta, phi] where r is in rj and phi is left handed in RADIANS
@@ -385,7 +385,7 @@ class AlfvenVel:
         phi_lh = startpoint[2]
 
         #print('hello', startpoint, direction)
-        plot_results = self.plotter.trace_magnetic_field(starting_cordinates=startpoint, one_way='on', break_point=2, step = 0.001, pathing= direction)
+        plot_results = self.plotter.trace_magnetic_field(starting_cordinates=startpoint, one_way='on', break_point=break_point, step = 0.001, pathing= direction)
         
         points = np.array(plot_results[0])
         #print(len(points))
@@ -988,7 +988,7 @@ class AlfvenVel:
 
         '''
         theta = np.pi/2
-        gridx, gridy = self.help.makegrid_2d_negatives(400 ,gridsize= gridsize)
+        gridx, gridy = self.help.makegrid_2d_negatives(200 ,gridsize= gridsize)
         vOutflows = []
         vas = []
         va_over_outflow = []
@@ -999,6 +999,7 @@ class AlfvenVel:
             Vas_row = []
             va_over_outflow_row = []
             for j in range(len(gridx)):
+                
                 x = gridx[i][j]
                 y = gridy[i][j]
                 r = np.sqrt(x**2 + y**2)
@@ -1014,8 +1015,12 @@ class AlfvenVel:
                 if equators == 'matched':
                     n = self.densityfunctions.density_same_equators(r, theta)
                 phi = np.arctan2(y,x) 
+                '''
+                cent_eq_latitude = self.help.centrifugal_equator(r, phi_rh_rad)
+                colatitude = np.pi/2 - cent_eq_latitude
+                '''
                 if equators == 'unmatched':
-                    n = self.densityfunctions.density_sep_equators(r, theta, phi)
+                    n = self.densityfunctions.density_sep_equators(r, theta, 2*np.pi-phi)
                 
                 B_r, B_theta, B_phi = self.field.Internal_Field(r, theta, phi, model=model) #calculates the magnetic field due to the internal field in spherical polar that point)
                 if cansheet == 'on':
@@ -1027,9 +1032,6 @@ class AlfvenVel:
                 B_x, B_y, B_z = self.help.Bsph_to_Bcart(B_overall[0], B_overall[1], B_overall[2], r, theta, phi)
                 B = np.array([B_x, B_y, B_z])
                 B = B/(1e9) #CHRIS code outputs nT
-                '''
-                ISSUE MAY BE HERE AS THE MANGITUDE OF B IS NOT TAKEN? - nope the calculator expects this.
-                '''
                 va = self.calculator(B, n)
                 va_corrected = self.relativistic_correction(va)
                 Vas_row.append(va_corrected)
@@ -1039,7 +1041,7 @@ class AlfvenVel:
             vOutflows.append(vOutflows_row)
             vas.append(Vas_row)
             va_over_outflow.append(va_over_outflow_row)
-            
+             
         #outflows_km= np.array(vOutflows)/1e3
         #va_over_outflow = [va/vo for va,vo in zip(vas,vOutflows)]
         #va_over_outflow = []
@@ -1049,7 +1051,7 @@ class AlfvenVel:
         fig, ax = plt.subplots(figsize = (25,16))
         #lev_exp = np.arange(np.floor(np.log10(np.min(va_over_outflow))-1), np.ceil(np.log10(np.max(va_over_outflow))+1), step = 0.25)
         #levs = np.power(10, lev_exp)
-        levs = [0,0.25,0.5,0.75,0.8,0.9,1,1.1,1.2,1.25,1.50,1.75,2]#, np.max(va_over_outflow)]
+        levs = [0,0.25,0.5,0.75,0.8,0.9,1,1.1,1.2,1.25,1.50,1.75,2,5,10]#, np.max(va_over_outflow)]
         plt.gca().patch.set_color('.25')
         cont = ax.contourf(gridx, gridy, va_over_outflow, cmap = 'seismic',norm = DivergingNorm(vcenter = 1), levels = levs)#levels = levs, # norm=mcolors.LogNorm())# locator=ticker.LogLocator())
         ax.add_patch(Circle((0,0), 1, color='y', zorder=100, label = "Jupiter"))
@@ -1387,11 +1389,185 @@ class AlfvenVel:
         plt.show()
 
 
+    def difference_in_travel_time(self, r, phi_lh_rad, equators = 'unmatched'):
+        theta = np.pi/2
+        point = [r, theta, phi_lh_rad]
+        phis = []
+        calc_f = self.travel_time(startpoint=point, print_time='on', direction = 'forward', equators=equators)
+        point[0] = point[0]/Rj
+        point[2] = 2*np.pi - point[2]
+        calc_b = self.travel_time(startpoint=point, print_time='on', direction = 'backward', equators=equators)
+        time_f = calc_f[0]
+        time_b = calc_b[0]
+        difference = abs(time_f - time_b)
+        return difference 
+    def difference_in_tt_multi(self, r = 8, num = 10, equators = 'unmatched'):
+        startingPoints = []
+        differences = []
+        phis = []
+        spacing = 2*np.pi/num
+        for n in range(num):
+            startingPoints.append([r, np.pi/2, n*spacing])
+            phis.append(n*spacing*180/np.pi)
+        for point in startingPoints:
+            print('New Startpoint, ', point)
+            phi_lh = point[2]
+            phi_lh_deg = phi_lh * 180/np.pi
+            calc_f = self.travel_time(startpoint=point, print_time='on', direction = 'forward', equators=equators)
+            point[0] = point[0]/Rj
+            point[2] = 2*np.pi - point[2]
+            print('amended point', point)
+            #print('got here, calc_f 0 =', calc_f[0], ' point = ' ,point)
+            calc_b = self.travel_time(startpoint=point, print_time='on', direction = 'backward', equators=equators)
+            time_f = calc_f[0]
+            time_b = calc_b[0]
+            difference = abs(time_b - time_f)
+            differences.append(difference)
+        fig, ax = plt.subplots()
+        ax.plot(phis, differences, color = 'k')
+        ax.grid()
+        ax.set(title = 'Difference of Travel time to north Vs South hemisphere \n Dependence on longitude', xlabel = 'phi $\u03BB_{III}$ (Degrees)',
+         ylabel = 'Difference in Time (Secconds)')
+        plt.show()
+
+    def db6_better(self, phi_lh_deg, numpoints = 200, mdots = [500,1300,2000]):
+        ''' for a given longitude, calculate radial outflow velocity vs local alfven velocity'''
+        ''' first, all of the outflow velocities for all of the given mdots '''
+        rs = np.linspace(6,60,numpoints)
+        #mdots = [500,1300,2000]
+        mdot_outflows = {}
+        for mdot in mdots:
+            outflow_for_given_mdot = []
+            for r in rs:
+                outflow = self.radialfunctions.flow_velocity(r, mdot)
+                outflow_for_given_mdot.append(outflow)
+            mdot_outflows[mdot] = outflow_for_given_mdot
+
+        ''' next, we need to calc alfven velocity, at each of the r values, along centrifigul equator, for given phi '''
+        vas = []
+        phi_rh_rad = (360 -phi_lh_deg) *np.pi/180
+        for r in rs:
+            n = self.radialfunctions.radial_density(r)
+            cent_eq_latitude = self.help.centrifugal_equator(r, phi_rh_rad)
+            colatitude = np.pi/2 - cent_eq_latitude
+            B_r, B_theta, B_phi = self.field.Internal_Field(r, colatitude, phi_rh_rad, model=self.model) #calculates the magnetic field due to the internal field in spherical polar that point)
+            B_current = self.field.CAN_sheet(r, colatitude, phi_rh_rad) #calculates the magnetic field due to the current sheet in spherical polar
+            B_notcurrent = np.array([B_r, B_theta, B_phi]) 
+            B_overall = np.add(B_current, B_notcurrent) #adds up the total magnetic field 
+            B_x, B_y, B_z = self.help.Bsph_to_Bcart(B_overall[0], B_overall[1], B_overall[2], r, colatitude, phi_rh_rad)
+            B = np.array([B_x, B_y, B_z])
+            B =  B/(10**9)  #chris's code is in nT
+            va = self.calculator(B, n)
+            vas.append(va)
+        
+        ''' and then we plot ''' 
+        fig, ax = plt.subplots()
+        for key in mdot_outflows:
+            v_kms = np.array(mdot_outflows[key]) /1000
+            ax.plot(rs, v_kms, label = 'Radial Velocity ({} = {}Kg/s)'.format(u'\u1E41' ,key))
+        vas_km = np.array(vas)/1000
+        ax.plot(rs, vas_km, label = 'Local Alfven Velocity')
+        ax.grid()
+        ax.legend()
+        ax.yaxis.set_ticks_position('both')
+        plt.yscale("log")
+        ax.set(title = 'Radial Outflow Along Centrifugal Equator And Local Alfven Velocity \n For $\u03BB_{{III}} $ Longitude of {:.1f}{} '.format(phi_lh_deg, u"\N{DEGREE SIGN}"),
+         xlabel = 'R ($R_J$)',ylabel = 'Velocity ($kms^{-1}$)')
+        plt.savefig('images-24-jan-update/radial_flow_plot_better.png')
+        plt.show()
+
+    def outflow_vs_alfven_cent_plane(self, mdot, equators = 'matched', gridsize = 20, model = 'VIP4', cansheet = 'off'):
+        ''' 
+         equators = 'matched' - spin and centrifgual axis are the same
+                 = 'unmatched' - spin and centrfigugal equators matched. 
+
+        '''
+        theta = np.pi/2
+        gridx, gridy = self.help.makegrid_2d_negatives(200 ,gridsize= gridsize)
+        vOutflows = []
+        vas = []
+        va_over_outflow = []
+        
+        for i in range(len(gridy)):
+            print('new row, {} to go'.format(len(gridx)-i))
+            vOutflows_row = [] 
+            Vas_row = []
+            va_over_outflow_row = []
+            for j in range(len(gridx)):
+                
+                x = gridx[i][j]
+                y = gridy[i][j]
+                r = np.sqrt(x**2 + y**2)
+                if r < 6:
+                    flow_vel = 10e3
+                    vOutflows_row.append(flow_vel)
+                    va = 1e6
+                    Vas_row.append(va)
+                    divided = va_corrected/flow_vel
+                    va_over_outflow_row.append(divided)
+                    continue
+                flow_vel = self.radialfunctions.flow_velocity(r, mdot)
+                if equators == 'matched':
+                    n = self.densityfunctions.density_same_equators(r, theta)
+                phi = np.arctan2(y,x) 
+                
+                cent_eq_latitude = self.help.centrifugal_equator(r, phi)
+                colatitude = np.pi/2 - cent_eq_latitude
+                if equators == 'unmatched':
+                    theta = colatitude
+                if equators == 'unmatched':
+                    n = self.densityfunctions.density_sep_equators(r, theta, 2*np.pi-phi)
+                
+                B_r, B_theta, B_phi = self.field.Internal_Field(r, theta, phi, model=model) #calculates the magnetic field due to the internal field in spherical polar that point)
+                if cansheet == 'on':
+                    B_current = self.field.CAN_sheet(r, theta, phi) #calculates the magnetic field due to the current sheet in spherical polar
+                else: 
+                    B_current = [0,0,0]
+                B_notcurrent = np.array([B_r, B_theta, B_phi]) 
+                B_overall = np.add(B_current, B_notcurrent) #adds up the total magnetic field 
+                B_x, B_y, B_z = self.help.Bsph_to_Bcart(B_overall[0], B_overall[1], B_overall[2], r, theta, phi)
+                B = np.array([B_x, B_y, B_z])
+                B = B/(1e9) #CHRIS code outputs nT
+                va = self.calculator(B, n)
+                va_corrected = self.relativistic_correction(va)
+                Vas_row.append(va_corrected)
+                vOutflows_row.append(flow_vel)
+                divided = va_corrected/flow_vel
+                va_over_outflow_row.append(divided)
+            vOutflows.append(vOutflows_row)
+            vas.append(Vas_row)
+            va_over_outflow.append(va_over_outflow_row)
+             
+        #outflows_km= np.array(vOutflows)/1e3
+        #va_over_outflow = [va/vo for va,vo in zip(vas,vOutflows)]
+        #va_over_outflow = []
+        
+        
+
+        fig, ax = plt.subplots(figsize = (25,16))
+        #lev_exp = np.arange(np.floor(np.log10(np.min(va_over_outflow))-1), np.ceil(np.log10(np.max(va_over_outflow))+1), step = 0.25)
+        #levs = np.power(10, lev_exp)
+        levs = [0,0.25,0.5,0.75,0.8,0.9,1,1.1,1.2,1.25,1.50,1.75,2,5,10]#, np.max(va_over_outflow)]
+        plt.gca().patch.set_color('.25')
+        cont = ax.contourf(gridx, gridy, va_over_outflow, cmap = 'seismic',norm = DivergingNorm(vcenter = 1), levels = levs)#levels = levs, # norm=mcolors.LogNorm())# locator=ticker.LogLocator())
+        ax.add_patch(Circle((0,0), 1, color='y', zorder=100, label = "Jupiter"))
+        ax.add_patch(Circle((0,0), 6.2, color='c', zorder=2, label = "Io Orbital Radius"))
+        ax.set_xlim(-gridsize,gridsize)
+        ax.set_ylim(-gridsize,gridsize)
+        for r in np.arange(0, 115, 5):
+            ax.add_patch(Circle((0,0), r, fill = False, color = 'mediumvioletred', zorder = 5))
+        ax.set(xlabel = 'X $(R_J)$ \n', ylabel = 'Y $(R_J)$', title = 'Radial Outflow vs Alfven Velocity in Equatorial Plane \n mdot = {}, equators = {}'.format(mdot, equators))
+        fig.colorbar(cont, label = ' Alfven Velocity / Radial Velocity', ticks = levs)
+        ax.set_aspect('equal', adjustable = 'box')
+        ax.legend()
+        plt.savefig('images-24-jan-update/v outflow vs VA equatorial')
+        plt.show()
+
 
 
     #def relativistic_correction_area_of_impact_3d(self)
 
-test = AlfvenVel(numpoints=200, model='VIP4', stop = 80)
+test = AlfvenVel(numpoints=200, model='VIP4', stop = 50)
 #test.top_down_matched_equators()
 #test.topdown_seperate_equators(density = 'on')
 #test.top_down_matched_equators()
@@ -1407,11 +1583,15 @@ test = AlfvenVel(numpoints=200, model='VIP4', stop = 80)
 #test.plot_B_debug_time()
 #test.plot_angle_vs_time(num=100, r = 14)
 #test.plot_multiple_distances(num = 70)
-#test.plot_angle_vs_time_btoh_directions(r=10, num=70, equators = 'matched')
+#test.plot_angle_vs_time_btoh_directions(r=10, num=70, equators = 'unmatched')
 #test.plot_multiple_distances_both_directions(num=50, r=10, equators='matched')
-#test.plot_outflow_vs_alfven(mdot = 500, gridsize = 80, model='VIP4', cansheet = 'on', equators = 'matched')
+#test.plot_outflow_vs_alfven(mdot = 1300, gridsize = 70, model='VIP4', cansheet = 'on', equators = 'unmatched')
+test.outflow_vs_alfven_cent_plane(mdot = 2000, gridsize = 70, model='VIP4', cansheet = 'on', equators = 'unmatched')
 #test.diverge_rel_correction()
 #test.visualise_rel_correction_single_point()
 #test.relativistic_correction_area_of_impact_2d(200.8)
 #test.relativistic_correction_area_of_impact_topdown()
-test.outflow_vs_alfven_v2(mdot = 500)
+#test.outflow_vs_alfven_v2(mdot = 130, gridsize =50)
+#print(test.difference_in_travel_time(r = 8, phi_lh_rad = 200.8))
+#test.difference_in_tt_multi(num = 100)
+#test.db6_better(200.8)

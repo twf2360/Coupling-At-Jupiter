@@ -101,13 +101,14 @@ class HelpfulFunctions():
         equation is eq 2 from https://agupubs.onlinelibrary.wiley.com/doi/epdf/10.1029/2020JA028713 eq 
         
         '''
-        phiLH = 2 * np.pi - phi
+        #phiLH = 2 * np.pi - phi
+        phiRH = phi
         a = 1.66 * np.pi / 180
         b = 0.131
         c = 1.62
         d = 7.76 * np.pi /180
         e = 249 * np.pi/180
-        centrifualEq = (a * np.tanh(b*r -c)+ d) * np.sin(phiLH - e)
+        centrifualEq = (a * np.tanh(b*r -c) + d) * np.sin(phiRH - e)
         
 
         return centrifualEq 
@@ -231,4 +232,4 @@ class HelpfulFunctions():
 '''
 test = HelpfulFunctions()
 print(test.complex_mag_equator(10,111*np.pi/180) * 180/np.pi)
-'''
+''' 

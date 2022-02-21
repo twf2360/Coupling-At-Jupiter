@@ -19,6 +19,7 @@ import scipy.special
 mpl.rcParams['legend.fontsize'] = 10
 plt.rcParams.update({'font.size': 22})
 
+
 Rj = 7.14e7
 class InternalAndCS:
     ''' 
@@ -334,10 +335,36 @@ class InternalAndCS:
         furthest_r = self.help.calc_furthest_r(points)
         return furthest_r
 
+    def radial_profile_b_eq_plane(self, start = 2, stop = 70, numpoints = 200, phi = 200.8):
+        rs = np.linspace(start, stop, numpoints)
+        phi_rad = 2*np.pi - (phi * np.pi/180)
+        theta = np.pi/2
+        magBs = []
+        for r in rs:
+            B_r, B_theta, B_phi = self.field.Internal_Field(r, theta, phi_rad, model = self.model) #calculates the magnetic field due to the internal field in spherical polar that point)
+            B_current = self.field.CAN_sheet(r, theta, phi_rad) #calculates the magnetic field due to the current sheet in spherical polar
+            B_notcurrent = np.array([B_r, B_theta, B_phi]) 
+            B_overall = np.add(B_current, B_notcurrent) #adds up the total magnetic field 
+            B_x, B_y, B_z = self.help.Bsph_to_Bcart(B_overall[0], B_overall[1], B_overall[2], r, theta, phi_rad)
+            B = np.array([B_x, B_y, B_z])
+            magB = np.linalg.norm(B)
+            magBs.append(magB)
+        fig, ax = plt.subplots(figsize = (8,5))
+        ax.plot(rs, magBs, label = 'Magnitude of Magnetic Field $(nT)$')
+        ax.legend()
+        ax.set(xlabel='Radius $(R_J)$', ylabel='Magnitude of Magnetic Field $(nT)$', title='magnetic Field Vs Radial Distsance in Equatorial plane')
+        ax.yaxis.set_ticks_position('both')
+        plt.yscale("log")
+        ax.grid()
+        plt.savefig('images-24-jan-update/mag_density_profile.png')
+        plt.show()
+
+'''
 test = InternalAndCS([30*Rj, np.pi/2, 111* np.pi/180], model = 'VIP4')
 #test.find_mag_equator(point=[30*Rj, np.pi/2, 111* np.pi/180])
 #test.plotTrace()
 #test.plotMultipleLines()
 #test.traceFieldEquator()
 #print(test.find_furthest_r_single_input([10*Rj, np.pi/2, 290.8*np.pi/180]))
-
+test.radial_profile_b_eq_plane()
+'''

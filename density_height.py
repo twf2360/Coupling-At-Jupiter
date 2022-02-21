@@ -203,7 +203,7 @@ class DensityHeight:
             #print(point, theta_mag_colat,  (np.pi/2) - theta_mag_colat )
             theta_mag = np.pi/2 - (theta_mag_colat -np.pi/2)
             #print(theta_mag_colat,theta_mag)
-            r_cent, theta_cent, phi_cent = self.help.change_equators(abs(point), np.pi/2, phi_lh_for_calc)
+            r_cent, theta_cent, phi_cent = self.help.change_equators(abs(point), np.pi/2, phi)
             r_centtheta_magtheta_dict[point] = [theta_cent, theta_mag]
             
             z_cent = abs(point) * np.cos(theta_cent)
@@ -294,7 +294,8 @@ class DensityHeight:
         '''
         r_cent = r 
         phi_cent = phi
-        theta_shift = self.help.centrifugal_equator(r, phi)
+        phi_rh = 2*np.pi - phi
+        theta_shift = self.help.centrifugal_equator(r, phi_rh)
         theta_cent = theta + theta_shift
         scaleheight = self.scaleheight(r_cent)
         n_0 = self.radialOutflowFunctions.radial_density(r_cent)
@@ -311,7 +312,7 @@ class DensityHeight:
 
 
     def equator_comparison_mag_cent(self, phi = 200, num = 200):
-        r_thetas_dict = self.meridian_slice(phi_lh = phi, num= num)
+        r_thetas_dict = self.meridian_slice(phi_lh = phi, num= num)[0]
         r_thetas_dict_positive_only = {k: v for (k, v) in r_thetas_dict.items() if k >= 6}
         #print(r_thetas_dict_positive_only)
         rs = list(r_thetas_dict_positive_only.keys())
@@ -405,7 +406,7 @@ class DensityHeight:
 
             theta_mag_colat = self.help.complex_mag_equator(abs(point),  phi_lh_for_calc)
             theta_mag = np.pi/2 - (theta_mag_colat -np.pi/2)
-            r_cent, theta_cent, phi_cent = self.help.change_equators(abs(point), np.pi/2, phi_lh_for_calc)
+            r_cent, theta_cent, phi_cent = self.help.change_equators(abs(point), np.pi/2, phi)
             r_centtheta_magtheta_dict[point] = [theta_cent, theta_mag]
             
             z_cent = abs(point) * np.cos(theta_cent)
@@ -504,6 +505,32 @@ class DensityHeight:
         plt.savefig('images-24-jan-update/density_longitude_slice-w-options.png')
         plt.show()
     
+    def phippsbagfig_recreate(self):
+        phi_rh_degs = np.array([39,69,99,159,339])
+        phi_lh_degs = 360 - phi_rh_degs
+        rs = np.linspace(2,50, num = 100) 
+        thetas_phis = {}
+        phi_rh_rads = phi_rh_degs * np.pi/180
+        phi_lh_rads = phi_lh_degs * np.pi/180
+        for phi in phi_rh_rads:
+            thetas = []
+            for r in rs:
+                theta = self.help.centrifugal_equator(r, phi)
+                #print(phi, theta)
+                thetas.append(theta * 180/np.pi)
+            thetas_phis[phi] = thetas
+        fig, ax = plt.subplots()
+        for key in thetas_phis:
+            ax.plot(rs, thetas_phis[key], label = 'elon = {:.1f}'.format(key * 180/np.pi))
+
+        ax.grid()
+        ax.legend()
+        ax.yaxis.set_ticks_position('both')
+        ax.set(title = 'Radial Distance vs Longitude of centrifugual equator',
+         xlabel = 'R ($R_J$)',ylabel = 'Theta')
+        plt.savefig('images-24-jan-update/phippsbag.png')
+        plt.show()
+
 '''
 test = DensityHeight(numpoints= 100, start= 5, stop = 30)
 #test.plotting(scale_height='on', density = 'on')    
@@ -511,6 +538,7 @@ test = DensityHeight(numpoints= 100, start= 5, stop = 30)
 #test.density_sep_equators(30, np.pi/2, 360*np.pi/180)
 #test.meridian_slice(200.8, lines='on')
 #test.field_line_on_contour(200.8, r = 10, one_way='on')
-#test.equator_comparison_mag_cent(200.8, num=500)
-test.contour_more_options(200.8, equators='matched')
+test.equator_comparison_mag_cent(200.8, num=500)
+#test.contour_more_options(200.8, equators='matched')
+#test.phippsbagfig_recreate()
 '''

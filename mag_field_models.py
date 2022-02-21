@@ -78,7 +78,7 @@ class field_models(object):
         #set current sheet parameters
         a = 5.0 # inner current sheet boundary
         b = 50.0 # outer current sheet boundary
-        D = 2.5 # current sheet half thickness
+        D = 2 # current sheet half thickness TWF changed this to 2 on 21/02/22
         c = 225 # (mu_0*I_0)/2
         DtoR = np.pi/180
         theta_CS = 9.6*DtoR #Current sheet tilt
