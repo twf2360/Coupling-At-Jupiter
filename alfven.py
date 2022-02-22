@@ -1191,7 +1191,7 @@ class AlfvenVel:
             
                 ''' if r>6, then density and mangetic field calculated in the same manner ''' 
                 if equators =='unmatched':    
-                    n = self.densityfunctions.density_sep_equators(r, theta, phi_lh)
+                    n = self.densityfunctions.density_sep_equators(r, theta, phi)
                 if equators =='matched':    
                     n = self.densityfunctions.density_same_equators(r, theta)
                 #print(n)
@@ -1563,8 +1563,61 @@ class AlfvenVel:
         plt.savefig('images-24-jan-update/v outflow vs VA equatorial')
         plt.show()
 
+    def lat_where_va_correction_matters(self, r, phi_lh_deg, step = 1*np.pi/180, rtol = 0.01
+    ,equators = 'unmatched'):
+        '''
+        input r in rj, phi sys III left handed 
+        return latitude where the relativistic correction matters
+        '''
+        '''
+        it'll probably be faster starting at vertically up and working out where it stops to matter?
+        '''
+        phi_lh_rad = phi_lh_deg * np.pi / 180
+        phi_rh_rad = 2*np.pi - phi_lh_rad
+        thetas = np.arange(2*np.pi/180, np.pi,step = step)
+        firsttime = 0
+        #print(thetas)
+        for theta in thetas:
+            if equators =='unmatched':    
+                n = self.densityfunctions.density_sep_equators(r, theta, phi_lh_rad)
+            if equators =='matched':    
+                n = self.densityfunctions.density_same_equators(r, theta)
+            #print(n)
 
+            B_r, B_theta, B_phi = self.field.Internal_Field(r, theta, phi_rh_rad, model=self.model) #calculates the magnetic field due to the internal field in spherical polar that point)
+            B_current = self.field.CAN_sheet(r, theta, phi_rh_rad) #calculates the magnetic field due to the current sheet in spherical polar
+            B_notcurrent = np.array([B_r, B_theta, B_phi]) 
+            B_overall = np.add(B_current, B_notcurrent)
+            B_x, B_y, B_z = self.help.Bsph_to_Bcart(B_overall[0], B_overall[1], B_overall[2], r, theta, phi_rh_rad)
+            
+            B = np.array([B_x, B_y, B_z])
+            B_tesla = B/(1e9) #CHRIS code outputs nT
+            va = self.calculator(B_tesla, n)
+            corrected_va = self.relativistic_correction(va)
+            if np.isclose(corrected_va, va, rtol = rtol):
+                #print(theta)
+                if firsttime ==0:
+                    value_1 = theta
+                    firsttime = 1
+                value_2 = theta
+                #print(value)
+        index_t = np.where(thetas == value_1)[0]
+        index_b = np.where(thetas == value_2)[0]
+        
+        first_theta_it_matters_colat = thetas[index_t[0]-1]
+        second_timc = thetas[index_b[0]-1]
+        
+        lat_top = np.pi/2 - first_theta_it_matters_colat
+        lat_deg_top = lat_top * 180/np.pi
 
+        lat_bottom = np.pi/2 - second_timc
+        lat_deg_bottom = lat_bottom * 180/np.pi
+        
+
+        return lat_deg_top, lat_deg_bottom
+        
+
+            
     #def relativistic_correction_area_of_impact_3d(self)
 
 test = AlfvenVel(numpoints=200, model='VIP4', stop = 50)
@@ -1586,12 +1639,14 @@ test = AlfvenVel(numpoints=200, model='VIP4', stop = 50)
 #test.plot_angle_vs_time_btoh_directions(r=10, num=70, equators = 'unmatched')
 #test.plot_multiple_distances_both_directions(num=50, r=10, equators='matched')
 #test.plot_outflow_vs_alfven(mdot = 1300, gridsize = 70, model='VIP4', cansheet = 'on', equators = 'unmatched')
-test.outflow_vs_alfven_cent_plane(mdot = 2000, gridsize = 70, model='VIP4', cansheet = 'on', equators = 'unmatched')
+#test.outflow_vs_alfven_cent_plane(mdot = 2000, gridsize = 70, model='VIP4', cansheet = 'on', equators = 'unmatched')
 #test.diverge_rel_correction()
 #test.visualise_rel_correction_single_point()
-#test.relativistic_correction_area_of_impact_2d(200.8)
+#test.relativistic_correction_area_of_impact_2d(200.8, equators='unmatched')
 #test.relativistic_correction_area_of_impact_topdown()
 #test.outflow_vs_alfven_v2(mdot = 130, gridsize =50)
 #print(test.difference_in_travel_time(r = 8, phi_lh_rad = 200.8))
 #test.difference_in_tt_multi(num = 100)
 #test.db6_better(200.8)
+
+print(test.lat_where_va_correction_matters(10, 291))

@@ -39,7 +39,7 @@ class DensityHeight:
         return H
 
     def density(self, n_0, z, H):
-        n = n_0 * np.exp(-z/H)
+        n = n_0 * (np.exp(-z/H)**2)
         return n
 
     def density_same_equators(self,r, theta, coord_system = 'LH'):
@@ -430,12 +430,12 @@ class DensityHeight:
                 s = grids[i][j]
                 r = np.sqrt(z**2 + s**2)
                 phi = phi_rh 
-
+                theta = np.arctan2(s,z)
                 if r < 6:
                     if firsttime == 0:
                         if equators == 'matched':
                             
-                            n_at_6 =  self.density_same_equators(6, theta, phi_lh_rad)
+                            n_at_6 =  self.density_same_equators(6, theta)
                         if equators == 'unmatched':
                             n_at_6 =  self.density_sep_equators(6, theta, phi_lh_rad)
                         firsttime == 1
@@ -443,7 +443,7 @@ class DensityHeight:
                     density_row.append(n)
                     continue
 
-                theta = np.arctan2(s,z)
+                #theta = np.arctan2(s,z)
                 if equators == 'matched':
                     #theta = np.pi/2 - theta
                     n = self.density_same_equators(r, theta)
@@ -538,7 +538,8 @@ test = DensityHeight(numpoints= 100, start= 5, stop = 30)
 #test.density_sep_equators(30, np.pi/2, 360*np.pi/180)
 #test.meridian_slice(200.8, lines='on')
 #test.field_line_on_contour(200.8, r = 10, one_way='on')
-test.equator_comparison_mag_cent(200.8, num=500)
-#test.contour_more_options(200.8, equators='matched')
+#test.equator_comparison_mag_cent(200.8, num=500)
+#
+test.contour_more_options(200.8, equators='unmatched', within_6='off')
 #test.phippsbagfig_recreate()
 '''
