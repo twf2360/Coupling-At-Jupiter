@@ -21,7 +21,7 @@ plt.rcParams['legend.fontsize'] = 14
 Rj = 7.14 * (10 ** 7)
 mu_0 = 1.25663706212 * 10 ** -6
 B0 = 417000 #in nT
-#plt.style.use('ggplot')
+plt.style.use('ggplot')
 
 ### Author @twf2360
 class main:
@@ -529,12 +529,12 @@ class main:
 
     def radial_profile_b_eq_plane(self, start = 2, stop = 70, numpoints = 200, phi = 200.8):
         rs = np.linspace(start, stop, numpoints)
-        phi_rad = 2*np.pi - (phi * np.pi/180)
+        phi_rh_rad = 2*np.pi - (phi * np.pi/180)
         theta = np.pi/2
         magBs = []
         for r in rs:
-            B_overall = self.mag_field_at_point(r, theta, phi)
-            B_x, B_y, B_z = self.Bsph_to_Bcart(B_overall[0], B_overall[1], B_overall[2], r, theta, phi_rh)
+            B_overall = self.mag_field_at_point(r, theta, phi_rh_rad)
+            B_x, B_y, B_z = self.Bsph_to_Bcart(B_overall[0], B_overall[1], B_overall[2], r, theta, phi_rh_rad)
             B = np.array([B_x, B_y, B_z])
             magB = np.linalg.norm(B)
             magBs.append(magB)
@@ -548,6 +548,41 @@ class main:
         ###plt.savefig('images-24-jan-update/mag_density_profile.png')
         plt.show()
 
+    def radial_profile_B_n(self, phi, start = 6, stop = 60, numpoints = 100):
+        rs = np.linspace(start, stop, numpoints)
+        phi_rh_rad = 2*np.pi - (phi * np.pi/180)
+        phi_lh_rad = phi * np.pi/180
+        theta = np.pi/2
+        magBs = []
+        ns= []
+        for r in rs:
+            if self.aligned  == 'no':
+                latitude_cent_equator = self.centrifugal_equator(r, phi_lh_rad)
+                colat = np.pi/2 - latitude_cent_equator
+            else:
+                colat = np.pi/2
+            B_overall = self.mag_field_at_point(r,colat, phi_rh_rad)
+            B_x, B_y, B_z = self.Bsph_to_Bcart(B_overall[0], B_overall[1], B_overall[2], r, theta, phi_rh_rad)
+            B = np.array([B_x, B_y, B_z])
+            magB = np.linalg.norm(B)
+            magBs.append(magB)
+            n = self.density_combined(r, colat,phi_lh_rad)
+            ns.append(n/1e6)
+            
+        fig, ax1 = plt.subplots(figsize = (8,5))
+        ax1.plot(rs, magBs, label = 'Magnitude of Magnetic Field $(nT)$')
+        plt.legend()
+        ax1.set(xlabel='Radius $(R_J)$', ylabel='Magnitude of Magnetic Field $(nT)$', title='magnetic Field  and Density Vs Radial Distsance in Equatorial plane')
+        ax1.yaxis.set_ticks_position('both')
+        plt.yscale("log")
+        ax2 = ax1.twinx()
+        ax2.plot(rs, ns, label = 'Density ($cm^{-3}$)', color = 'k')
+        plt.grid()
+        ###plt.savefig('images-24-jan-update/mag_density_profile.png')
+        plt.show()
+   
+   
+   
     ''' 
     radial functions 
     '''
@@ -2391,4 +2426,5 @@ main = main('VIP4', 'no')
 #main.outflow_vs_alfven_cent_plane(1300)
 #main.alfven_topdown_equatorial_plane(gridsize = 60)
 #main.plot_radial_outflow_contour(1300)
-main.plot_Bvs_r_cent_equator(200.8)
+#main.plot_Bvs_r_cent_equator(200.8)
+main.radial_profile_B_n(200.8)
