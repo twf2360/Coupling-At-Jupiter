@@ -20,7 +20,8 @@ plt.rcParams.update({'font.size': 22})
 plt.rcParams['legend.fontsize'] = 14
 Rj = 7.14 * (10 ** 7)
 mu_0 = 1.25663706212 * 10 ** -6
-B0 = 4.17e-5
+B0 = 417000 #in nT
+#plt.style.use('ggplot')
 
 ### Author @twf2360
 class main:
@@ -39,10 +40,20 @@ class main:
 
         if self.model == 'dipole':
             self.aligned = 'yes'
+            plot_label = 'Spin Aligned Dipole Magnetic Field Approximation'
+
         else:
             self.aligned = aligned
             self.field = field_models()
+            if aligned == 'yes':
+                plot_label = 'VIP4 Magnetic Field With Spin Aligned Centrifugal Equator Approximation'
+            else:
+                plot_label = 'VIP4 Magnetic Field With Non-Aligned Spin and Centrifugal Equators'
         self.avgIonMass = avgIonMass * 1.67 * 10**-27
+        self.CML = 0
+        
+
+    
     """ 
     the below are helpful functions such as co-ordinate transforms 
     """
@@ -177,33 +188,20 @@ class main:
         guesses_radians_1 = guesses_degress * np.pi/180
         oneDegreeInRadians = 1*np.pi/180
         def find_swap(angles):
-            #print(angles)
             b_r_list = []
-            #print(b_r_list)
             for i in range(len(angles)):
                 B_overall = self.mag_field_at_point(r, angles[i], phi)
-                #print(B_overall[0])
+
                 b_r_list.append(B_overall[0])
-                #print(B_overall)
-                #print(b_r_list)
             crossing = np.where(np.diff(np.sign(b_r_list)))[0]
-            b_r_list = []
-            #print(crossing)
-            #print(b_r_list)       
+            b_r_list = []      
             return angles[crossing], angles[crossing+1]
         stop1, stop2 = find_swap(guesses_radians_1)
-
-        #print(stop1*180/np.pi, stop2*180/np.pi)
         guesses_2 = np.arange(stop1, stop2 + oneDegreeInRadians, oneDegreeInRadians)
-        #print(guesses_2)
-
         stop3, stop4 = find_swap(guesses_2)
-        #print(stop3*180/np.pi, stop4*180/np.pi)
         guesses_3 = np.arange(stop3, stop4+ 0.1* oneDegreeInRadians, 0.1*oneDegreeInRadians )
         answer_low, answer_high = find_swap(guesses_3)
         answer = (answer_high + answer_low) /2
-        #print(answer_low*180/np.pi, answer_high*180/np.pi)
-        #print(answer[0]*180/np.pi)
         return answer[0]
     
 
@@ -246,7 +244,22 @@ class main:
     ''' 
     The Below to trace the magnetic field
     '''
-
+    def plot_Bvs_r_cent_equator(self, phi_lh_deg):
+        ''' plot B vs R along the centrifugal equator '''
+        rs = np.arange(6,60,0.5)
+        phi_lh_rad = phi_lh_deg *np.pi/180
+        phi_rh_rad = 2*np.pi - phi_lh_rad
+        Bs = []
+        for r in rs:
+            latitude_cent_equator = self.centrifugal_equator(r, phi_lh_rad)
+            colat = np.pi/2 - latitude_cent_equator
+            B = self.mag_field_at_point(r,colat, phi_rh_rad)
+            magB = B[0]
+            Bs.append(magB)
+        ''' plot stuff goes here ''' 
+        fig, ax = plt.subplots()
+        ax.plot(rs,Bs)
+        plt.show()
     def trace_magnetic_field(self, printing = 'off', starting_cordinates = None, one_way = 'off', break_point = 3, step = 0.001, pathing = 'forward'):
         ''' INPUT PHI IS LH ''' 
 
@@ -347,7 +360,7 @@ class main:
         ax.set_ylabel('$Y, R_J$', fontsize=10)
         plt.title('Magnetic Field Trace using {} model, including current sheet'.format(self.model))
         #plt.legend()
-        plt.savefig('images/mag_field_trace_{}_current.png'.format(self.model))
+        ####plt.savefig('images/mag_field_trace_{}_current.png'.format(self.model))
         plt.show()
 
 
@@ -390,7 +403,7 @@ class main:
         ax.set_ylabel('$Y, R_J$', fontsize=10)
         plt.title('Magnetic Field Trace using {} model, including current sheet'.format(self.model))
         #plt.legend()
-        plt.savefig('images/mag_field_multi_trace_{}_inc_current.png'.format(self.model))
+        ###plt.savefig('images/mag_field_multi_trace_{}_inc_current.png'.format(self.model))
         plt.show()
 
     
@@ -413,7 +426,7 @@ class main:
         #make the circle
         ax.add_patch(Circle((0,0), Rj, color='y', zorder=100, label = "Jupiter"))
         ax.legend()
-        plt.savefig('images/individual_mag_field_trace_2d_inc_current_sheet.png')
+        ###plt.savefig('images/individual_mag_field_trace_2d_inc_current_sheet.png')
         plt.show()
 
     def make_sphere(self):
@@ -482,8 +495,8 @@ class main:
             return theta 
         theta = interpolate(index)
         print(theta*180/np.pi)
-        r = self.starting_cordinates[0]
-        R_rj = r/Rj
+        #r = self.starting_cordinates[0]
+        R_rj = 30
         start_phi = self.starting_cordinates[2]
         output = self.sph_to_cart(R_rj, theta, start_phi)
 
@@ -492,7 +505,7 @@ class main:
         ax.plot(transposed_equator[0], transposed_equator[1], transposed_equator[2], color = 'c', label = 'mag field equator')#, linewidth = 5.0)
         #print(transposed_equator)
         #plt.legend()
-        plt.savefig('images/mag_field_trace_showing_B_equator.png'.format(self.model))
+        ###plt.savefig('images/mag_field_trace_showing_B_equator.png'.format(self.model))
         plt.show()
             
     def find_index_negative(self, listInput):
@@ -532,7 +545,7 @@ class main:
         ax.yaxis.set_ticks_position('both')
         plt.yscale("log")
         ax.grid()
-        plt.savefig('images-24-jan-update/mag_density_profile.png')
+        ###plt.savefig('images-24-jan-update/mag_density_profile.png')
         plt.show()
 
     ''' 
@@ -556,7 +569,7 @@ class main:
         #radial cross sectional area of plasma torus
         A = z * 2 * np.pi * r * Rj
 
-        v =  mdot/(n*self.avgIonMass*A/1.67e-27)
+        v =  mdot/(n*self.avgIonMass*A)#/1.67e-27)
         return v
 
     def radial_density(self, r):
@@ -582,7 +595,7 @@ class main:
             ax.set(xlabel='Radius $(R_J)$', ylabel='Density ($m^3$)', title='Density Vs Radial Distsance')
             ax.yaxis.set_ticks_position('both')
             plt.yscale("log")
-            plt.savefig('images-24-jan-update/radial_density_profile.png')
+            ###plt.savefig('images-24-jan-update/radial_density_profile.png')
             plt.show()
         return radii, densities
         
@@ -608,12 +621,12 @@ class main:
         ax2.legend()
         ax2.set(xlabel='Radius $(R_J)$', ylabel='Density ($m^{-3}$)') #, title='Density Vs Radial Distance')
         ax2.yaxis.set_ticks_position('both')
-        plt.savefig('images-24-jan-update/radial_density_profile_two_points.png')
+        ###plt.savefig('images-24-jan-update/radial_density_profile_two_points.png')
         plt.show()
         
 
         
-    def local_Alfven_vel(self, r, theta = np.pi/2, phi = 0):
+    def local_Alfven_vel_simple(self, r, theta = np.pi/2, phi = 0):
         help = HelpfulFunctions()
         ''' 
         inputs:
@@ -642,7 +655,7 @@ class main:
             flow_for_given_mdot = []
             for r in r_values:
                 if i == 0:    
-                    Va = self.local_Alfven_vel(r)
+                    Va = self.local_Alfven_vel_simple(r)
                     alfven_vel_values.append(Va)
                     
                 v = self.flow_velocity(r, mdot)
@@ -651,24 +664,24 @@ class main:
             i = 1
         
 
-        np.save("data/radial_flow/local_alfven.npy", alfven_vel_values, allow_pickle=True)
-        np.save("data/radial_flow/flow_velocity.npy", flow_values, allow_pickle=True)
+        np.save("Old/data/radial_flow/local_alfven.npy", alfven_vel_values, allow_pickle=True)
+        np.save("Old/data/radial_flow/flow_velocity.npy", flow_values, allow_pickle=True)
         myjson = json.dumps(flow_values)
-        f = open("data/radial_flow/flow_values_dict.json", "w")
+        f = open("Old/data/radial_flow/flow_values_dict.json", "w")
         f.write(myjson)
         f.close()
-        np.save("data/radial_flow/r_values.npy", r_values, allow_pickle=True)
+        np.save("Old/data/radial_flow/r_values.npy", r_values, allow_pickle=True)
     
 
     def plotOutflow(self):
         '''
         requires there to be data already - plots outflow velocity against radial distance
         '''
-        va_values = np.load("data/radial_flow/local_alfven.npy", allow_pickle=True)
-        r_values = np.load("data/radial_flow/r_values.npy", allow_pickle=True)
+        va_values = np.load("Old/data/radial_flow/local_alfven.npy", allow_pickle=True)
+        r_values = np.load("Old/data/radial_flow/r_values.npy", allow_pickle=True)
         Rj_values = r_values/Rj
         #v_values = np.load("data/radial_flow/flow_velocity.npy", allow_pickle=True)
-        with open("data/radial_flow/flow_values_dict.json", "r") as json_dict:
+        with open("Old/data/radial_flow/flow_values_dict.json", "r") as json_dict:
             v_values = json.load(json_dict)
         
         fig, ax = plt.subplots()
@@ -695,7 +708,7 @@ class main:
         ax.legend()
         ax.yaxis.set_ticks_position('both')
         plt.yscale("log")
-        plt.savefig('images-24-jan-update/radial_flow_plot.png')
+        ###plt.savefig('images-24-jan-update/radial_flow_plot.png')
         plt.show()
 
     ''' more density functions '''
@@ -711,9 +724,11 @@ class main:
         H = 10**h # Don't worry about the runtime warning - H get's really big for Large R values :D 
         return H
 
-    def density_combined(self,r, theta, phi_lh):
-        
-        
+    def density_combined(self,r, theta, phi_lh): 
+        def density(n_0, z, H):
+            n = n_0 * np.exp(-z/H)**2
+            return n
+        ''' phi lh '''
         def density_sep_equators(r, theta, phi):
             ''' 
             Input r, theta (colatitude), phi (lh)
@@ -727,7 +742,7 @@ class main:
             scaleheight = self.scaleheight(r_cent)
             n_0 = self.radial_density(r_cent)
             z_cent =  r_cent * np.cos(theta_cent)
-            n = self.density(n_0, abs(z_cent), scaleheight)
+            n = density(n_0, abs(z_cent), scaleheight)
             return n 
 
         def density_same_equators(r, theta):
@@ -739,7 +754,7 @@ class main:
             n_0 = self.radial_density(r)
             z = abs(r*np.cos(theta))
             scaleheight = self.scaleheight(r)
-            den = self.density(n_0, z, scaleheight)
+            den = density(n_0, z, scaleheight)
             return den
         if self.aligned == 'yes':
             n = density_same_equators(r = r, theta = theta)
@@ -755,15 +770,12 @@ class main:
         
     
 
-    def density(self, n_0, z, H):
-        n = n_0 * np.exp(-z/H)**2
-        return n
 
     
 
-    def plotting(self, density = 'on',scale_height = 'off'):
-        radii, n_0s = self.radialOutflowFunctions.plotRadialDensity(start=self.start, end = self.stop, numpoints=self.numpoints)
-        zs =  np.linspace(self.start, self.stop, self.numpoints)
+    def plotting(self, density = 'on',scale_height = 'off', start = 6, end = 60, numpoints = 200):
+        radii, n_0s = self.radialOutflowFunctions.plotRadialDensity(start=start, end = stop, numpoints=numpoints)
+        zs =  np.linspace(start, stop, numpoints)
         ns = []
         H_rj_s = []
         Hs = []
@@ -842,7 +854,7 @@ class main:
          title = 'Different Equators at Jupiter, SYSIII longitude =   {:.0f}{} on RHS'.format(phi_lh_deg,  u"\N{DEGREE SIGN}"))
         ax.set_aspect(aspect='equal')
         plt.legend()
-        plt.savefig('images/equators.png')
+        ###plt.savefig('images/equators.png')
         plt.show()
 
     def equator_comparison_mag_cent(self, phi = 200, num = 200):
@@ -863,7 +875,6 @@ class main:
         plt.show()
 
     def density_contour_meridian(self, phi_lh, gridsize =30,field_line_r = 10, field_line = 'on', within_6 = 'on', num = 200, one_way = 'off'):
-        firsttime = 0
         phi_lh_rad = phi_lh*np.pi/180
         phi_rh_rad = 2*np.pi/2 - phi_lh_rad
         
@@ -887,9 +898,9 @@ class main:
 
             theta_mag_colat = self.complex_mag_equator(abs(point),  phi_lh_for_calc)
             theta_mag = np.pi/2 - (theta_mag_colat -np.pi/2)
-            r_cent, theta_cent, phi_cent = self.change_equators(abs(point), np.pi/2, phi)
+            latitude_cent = self.centrifugal_equator(abs(point), phi)
+            theta_cent = np.pi/2 - latitude_cent
             r_centtheta_magtheta_dict[point] = [theta_cent, theta_mag]
-            
             z_cent = abs(point) * np.cos(theta_cent)
             z_mag = abs(point) * np.cos(theta_mag)
             mag_plot_points.append([point, z_mag]) 
@@ -903,8 +914,7 @@ class main:
         spin_eq_plot_t = np.transpose(spin_eq_plot)
         
         for i in range(len(gridz)):
-            #print('new row, {} to go'.format(len(gridz)-i))
-            firsttime = 0
+            print('new row, {} to go'.format(len(gridz)-i))
             density_row = []
             for j in range(len(grids)):
                 z = gridz[i][j]
@@ -913,12 +923,7 @@ class main:
                 phi = phi_rh_rad
                 theta = np.arctan2(s,z)
                 if r < 6:
-                    
-                    if firsttime == 0:
-                        print('helloe')
-                        n_at_6 = self.density_combined(6, theta, phi_lh_rad)
-                        #print(r)
-                        firsttime = 1
+                    n_at_6 = self.density_combined(6, theta, phi_lh_rad)
                     n = self.density_within_6(r, theta, phi_lh_rad, n_at_6)
                     density_row.append(n)
                     continue
@@ -978,7 +983,7 @@ class main:
         fig.colorbar(cont, label = 'Density $(cm^{-3})$', ticks = levs)
         ax.set_aspect('equal', adjustable = 'box')
         ax.legend()
-        plt.savefig('images-24-jan-update/density_longitude_slice-w-options.png')
+        ###plt.savefig('images-24-jan-update/density_longitude_slice-w-options.png')
         plt.show()
     
     def phippsbagfig_recreate(self):
@@ -1004,7 +1009,7 @@ class main:
         ax.yaxis.set_ticks_position('both')
         ax.set(title = 'Radial Distance vs Longitude of centrifugual equator',
          xlabel = 'R ($R_J$)',ylabel = 'Theta')
-        plt.savefig('images-24-jan-update/phippsbag.png')
+        ###plt.savefig('images-24-jan-update/phippsbag.png')
         plt.show()
 
     ''' last but not least, alfven functions '''
@@ -1016,9 +1021,9 @@ class main:
         return Va
 
     #add a constant phi part too! 
-    def alfven_topdown(self):
+    def alfven_topdown_equatorial_plane(self, gridsize = 30):
         theta = np.pi/2 #<- CHANGE THIS TO VIEW A SLIGHTLY DIFFERENT PLANE
-        gridx, gridy = self.makegrid_2d_negatives(200 ,gridsize= 30)
+        gridx, gridy = self.makegrid_2d_negatives(200 ,gridsize= gridsize)
         n_0s = []
         #print(x_s, y_s)
 
@@ -1032,23 +1037,27 @@ class main:
                 y = gridy[i][j]
                 r = np.sqrt(x**2 + y**2)
                 phi = np.arctan2(y,x)
+                phi_lh = 2*np.pi - phi
                 #print(r)
                 if r <6:
-                    if firsttime == 0:
-                        n_at_6 = density_combined(r, theta, phi_lh_rad)
-                        firsttime = 1
-                    n = self.density_within_6(r, theta, phi_lh_rad, n_at_6)
-                    density_row.append(n)
+                    ''' 
+                    the stuff below, whilst technically correct, leads to a va way higher than anywhere else. This ruins the look of the contour 
+
+                    n_at_6 = self.density_combined(r, theta, phi_lh)
+                    n = self.density_within_6(r, theta, phi_lh, n_at_6)
                     B_overall = self.mag_field_at_point(r, theta, phi)
-                    B_x, B_y, B_z = self.Bsph_to_Bcart(B_overall[0], B_overall[1], B_overall[2], r, theta, phi_rh)
+                    B_x, B_y, B_z = self.Bsph_to_Bcart(B_overall[0], B_overall[1], B_overall[2], r, theta, phi)
                     B = np.array([B_x, B_y, B_z])
                     va = self.calculator(B, n)
-                    Vas_row.append(va)
+                    va_corrected = self.relativistic_correction(va)
+                    Vas_row.append(va_corrected)
+                    '''
+                    Vas_row.append(1e6)
                     continue
-                n = self.radial_density(abs(r))
+                n = self.density_combined(r, theta, phi_lh)
                 phi = np.arctan2(y,x)
                 B_overall = self.mag_field_at_point(r, theta, phi)
-                B_x, B_y, B_z = self.Bsph_to_Bcart(B_overall[0], B_overall[1], B_overall[2], r, theta, phi_rh)
+                B_x, B_y, B_z = self.Bsph_to_Bcart(B_overall[0], B_overall[1], B_overall[2], r, theta, phi)
                 B = np.array([B_x, B_y, B_z])
                 B =  B/(10**9)  #chris's code is in nT
                 va = self.calculator(B, n)
@@ -1062,32 +1071,29 @@ class main:
 
         #log_vas_km = np.log(Vas_km)
         fig, ax = plt.subplots(figsize = (25,15))
-        cont = ax.contourf(self.gridx, self.gridy, Vas_km, cmap = 'bone')#, locator=ticker.LogLocator())
+        cont = ax.contourf(gridx, gridy, Vas_km, cmap = 'bone')#, locator=ticker.LogLocator())
         ax.add_patch(Circle((0,0), 1, color='y', zorder=100, label = "Jupiter"))
         ax.add_patch(Circle((0,0), 6, color='c', zorder=90, label = "Io Orbital Radius"))
         ax.legend()
-        ax.set_xlim(-self.stop,self.stop)
-        ax.set_ylim(-self.stop,self.stop)
+        ax.set_xlim(-gridsize,gridsize)
+        ax.set_ylim(-gridsize,gridsize)
         degrees = theta * 180 /np.pi
-        ax.set(xlabel = 'x $(R_J)$', ylabel = 'y $(R_J)$', title = 'alfven velocity in the colatitude = {:.0f}{} plane for aligned spin and centrifugal equators'.format(degrees, u"\N{DEGREE SIGN}"))
+        ax.set(xlabel = 'X $(R_J)$', ylabel = 'Y $(R_J)$', title = 'Alfven velocity in the Equatorial plane')
         fig.colorbar(cont, label = '$V_a (km)$')
         ax.set_aspect('equal', adjustable = 'box')
         for r in np.arange(0, 115, 5):
-            ax.add_patch(Circle((0,0), r, fill = False, color = 'lightgreen'))
-        plt.savefig('images-24-jan-update/va_topdown.png')
-        #plt.show() 
+            ax.add_patch(Circle((0,0), r, fill = False, color = 'firebrick'))
+        ###plt.savefig('images-24-jan-update/va_topdown.png')
+        plt.show() 
         return Vas
-    def alfven_meridian_slice(self, phi_lh):
-        firsttime = 0
+    def alfven_meridian_slice(self, phi_lh, gridsize = 30, field_line_r = 10, field_line = 'on', within_6 = 'on', num = 200, one_way = 'off'):
+
         phi_lh_rad = phi_lh*np.pi/180
         phi_rh_rad = 2*np.pi/2 - phi_lh_rad
-        #fig, ax = plt.subplots(figsize = (25,16))
-        phi_lh_rad = phi_lh * np.pi/180
-        phi_rh = 2*np.pi - phi_lh_rad
         
-        #print(phi_rh)
         densities = []
-        grids, gridz = self.makegrid_2d_negatives(200 ,gridsize= self.stop)
+        vas = []
+        grids, gridz = self.makegrid_2d_negatives(200 ,gridsize= gridsize)
 
         r_cent_points = np.linspace(-30, 30, num=num)
         cent_plot_points = []
@@ -1096,19 +1102,19 @@ class main:
 
         for point in r_cent_points:
             if point > 0:
-                phi = phi_rh + np.pi 
+                phi = phi_rh_rad + np.pi 
                 phi_lh_for_calc = phi_lh_rad + np.pi
             else: 
-                phi = phi_rh 
+                phi = phi_rh_rad
                 phi_lh_for_calc = phi_lh_rad
             if -1 < point <1: 
                 continue 
 
             theta_mag_colat = self.complex_mag_equator(abs(point),  phi_lh_for_calc)
             theta_mag = np.pi/2 - (theta_mag_colat -np.pi/2)
-            r_cent, theta_cent, phi_cent = self.change_equators(abs(point), np.pi/2, phi)
+            latitude_cent = self.centrifugal_equator(abs(point), phi)
+            theta_cent = np.pi/2 - latitude_cent
             r_centtheta_magtheta_dict[point] = [theta_cent, theta_mag]
-            
             z_cent = abs(point) * np.cos(theta_cent)
             z_mag = abs(point) * np.cos(theta_mag)
             mag_plot_points.append([point, z_mag]) 
@@ -1122,36 +1128,60 @@ class main:
         spin_eq_plot_t = np.transpose(spin_eq_plot)
         
         for i in range(len(gridz)):
-            
-            
+            print('new row, {} to go'.format(len(gridz)-i))
+            Vas_row = []
             density_row = []
             for j in range(len(grids)):
                 z = gridz[i][j]
                 s = grids[i][j]
                 r = np.sqrt(z**2 + s**2)
-                phi = phi_rh 
+                phi = phi_rh_rad 
                 theta = np.arctan2(s,z)
                 if r < 6:
-                    if firsttime == 0:
-                        n = self.density_combined(r, theta, phi_lh_rad)
-                        firsttime == 1
-                    n = self.density_within_6(r, theta, phi_lh_rad, n_at_6)
-                    density_row.append(n)
+
+                    ''' i think this is causing problems '''
+                    
+                    if within_6 == 'on':
+                        n_at_6 = self.density_combined(r, theta, phi_lh_rad)
+                        n = self.density_within_6(r, theta, phi_lh_rad, n_at_6)
+                        density_row.append(n)
+                        B_overall = self.mag_field_at_point(r, theta, phi)
+                        B_x, B_y, B_z = self.Bsph_to_Bcart(B_overall[0], B_overall[1], B_overall[2], r, theta, phi)
+                        B = np.array([B_x, B_y, B_z])
+                        B =  B/(10**9)  #chris's code is in nT
+                        va = self.calculator(B, n)
+                        va_corrected = self.relativistic_correction(va)
+                        Vas_row.append(va_corrected)
+                        filled = False
+                    else:
+            
+                        Vas_row.append(1e6)
+                        Filled = True
+                    
                     continue
 
                 
                 n = self.density_combined(r, theta, phi_lh_rad)
                 density_row.append(n)
+                B_overall = self.mag_field_at_point(r, theta, phi)
+                B_x, B_y, B_z = self.Bsph_to_Bcart(B_overall[0], B_overall[1], B_overall[2], r, theta, phi)
+                B = np.array([B_x, B_y, B_z])
+                B =  B/(10**9)  #chris's code is in nT
+                va = self.calculator(B, n)
+                va_corrected = self.relativistic_correction(va)
+                Vas_row.append(va_corrected)
             densities.append(density_row)
+            vas.append(Vas_row)
         
-        densities_cm = np.array(densities)/1e6
-        densities_cm_edits = np.clip(densities_cm, 1e-2, 1e10)
+        Vas_km = np.array(vas)/(1000)
+        vas_km_clip = np.clip(Vas_km, 10, 3e5)
+        vas_km_edits = np.nan_to_num(vas_km_clip, 10)
         fig, ax = plt.subplots(figsize = (25,16))
-        lev_exp = np.arange(np.floor(np.log10(densities_cm_edits.min())-1), np.ceil(np.log10(densities_cm_edits.max())+1), step = 0.25)
-        levs = np.power(10, lev_exp)
-        cont = ax.contourf(grids, gridz, densities_cm_edits, cmap = 'bone', levels = levs, norm=mcolors.LogNorm())#, locator=ticker.LogLocator()) #, levels = 14)
+        #lev_exp = np.arange(np.floor(np.log10(vas_km_edits.min())-1), np.ceil(np.log10(vas_km_edits.max())+1), step = 0.25)
+        #levs = np.power(10, lev_exp)
+        cont = ax.contourf(grids, gridz, vas_km_edits, cmap = 'bone') #,levels = levs, norm=mcolors.LogNorm())#, locator=ticker.LogLocator()) #, levels = 14)
         ax.add_patch(Circle((0,0), 1, color='y', zorder=100, label = "Jupiter"))
-        ax.add_patch(Circle((0,0), 6, color='c', zorder=90, label = "Io Orbital Radius", fill = False))
+        ax.add_patch(Circle((0,0), 6, color='c', zorder=90, label = "Io Orbital Radius", fill = filed))
         ax.text(0.95, 0.01, 'SYS III (LH) Longitutude = {:.1f}{} '.format(phi_lh, u"\N{DEGREE SIGN}"),
         verticalalignment='bottom', horizontalalignment='right',
         transform=ax.transAxes,
@@ -1184,23 +1214,23 @@ class main:
         ax.set_xlim(-30,30)
         ax.set_ylim(-15,15)
         ax.set(xlabel = ' x($R_J$) \n', ylabel = 'y ($R_J$)', title = 'Density Contour Plot for Given longitude') #, title = 'CML 202 $\u03BB_{III}$')
-        if equators == 'unmatched':
+        if self.aligned == 'no':
             ax.plot(mag_plot_points_t[0], mag_plot_points_t[1], label = 'Magnetic Equator', color = 'm')
             ax.plot(cent_plot_points_t[0], cent_plot_points_t[1], label = 'Centrifugal Equator')
             label = 'Spin Equator'
-        if equators == 'matched':
+        if self.aligned == 'yes':
             label = 'Spin & Centrifugal Equator'
         ax.plot(spin_eq_plot_t[0], spin_eq_plot_t[1], label = label)
-        fig.colorbar(cont, label = 'Density $(cm^{-3})$', ticks = levs)
+        fig.colorbar(cont, label = 'Va $(Kms^{-1})$')#, ticks = levs)
         ax.set_aspect('equal', adjustable = 'box')
         ax.legend()
-        plt.savefig('images-24-jan-update/density_longitude_slice-w-options.png')
+        ###plt.savefig('images-24-jan-update/density_longitude_slice-w-options.png')
         plt.show()
     
         
-    def travel_time(self, startpoint = [30, np.pi/2, 212* np.pi/180], direction = 'forward', path_plot = 'off', dr_plot = 'off', print_time = 'on',
+    def travel_time(self, startpoint = [10, np.pi/2, 212* np.pi/180], direction = 'forward', path_plot = 'off', dr_plot = 'off', print_time = 'on',
      va_plot ='off',b_plot = 'off', n_plot = 'off', vvsrplot = 'off', uncorrected_vvsr = 'off',
-    debug_plot = 'off', nvsrplot = 'off', equators = 'unmatched', break_point = 2):
+    debug_plot = 'off', nvsrplot = 'off', break_point = 2):
         '''
         Calculate the travel path/time of an alfven wave from a given startpoint to the ionosphere. 
         input startpoint [r, theta, phi] where r is in rj and phi is left handed in RADIANS
@@ -1233,7 +1263,7 @@ class main:
         va_uncorrected_list = []
         va_corrected_list = []
         
-        firsttime = 0
+
         for i in range(len(points)-1):
             start_point = points[i]
             end_point = points[i+1]
@@ -1256,16 +1286,7 @@ class main:
             phi_lh = 2*np.pi - phi
             
             if r < 6: 
-                if firsttime == 0:
-                    if equators == 'unmatched':
-                        n_at_6 =  self.density_sep_equators(6, theta, phi_lh)
-                    if equators == 'matched':
-                        n_at_6 =  self.density_same_equators(6, theta)
-                    firsttime == 1
-                '''
-                this is where the density problem lies - we need to put a better version of the density in here! 
-                ''' 
-                
+                n_at_6 = self.density_combined(r, theta, phi_lh)
                 n = self.density_within_6(r, theta, phi_lh, n_at_6)
                 n_along_path.append(n)
                 va = self.calculator(averageB, n)
@@ -1307,7 +1328,7 @@ class main:
             ax.plot(plottable_list_rj[0], plottable_list_rj[1], plottable_list_rj[2],color = 'black', label = 'Field Trace')
             
             #make the sphere and setup the plot
-            x,y, z = self.plotter.make_sphere()
+            x,y, z = self.make_sphere()
             ax.plot_surface(x, y, z, color = 'yellow', zorder=100, label = 'Jupiter')
             ax.set_xlim3d(-40, 40)
             ax.set_ylim3d(-40, 40)
@@ -1320,7 +1341,7 @@ class main:
             ax.text2D(0.05, 0.95, 'time = {:.1f}s (= {:.1f}mins)'.format(time, time/60), transform=ax.transAxes)
 
             #plt.legend()
-            plt.savefig('images-24-jan-update/travel_time_trace.png'.format(self.model))
+            ###plt.savefig('images-24-jan-update/travel_time_trace.png'.format(self.model))
             plt.show()
         if dr_plot == 'on':
 
@@ -1362,7 +1383,7 @@ class main:
             #plt.grid(True)
             plt.figlegend()
             fig.suptitle('Effect of including relativistic correction')
-            plt.savefig('images-24-jan-update/va correction effects.png')
+            ###plt.savefig('images-24-jan-update/va correction effects.png')
             plt.grid(which='both')
             plt.show()
         if b_plot == 'on':
@@ -1446,7 +1467,7 @@ class main:
 
             ax1.legend()
             ax1.set_title('Alfven Velocity Against Distance from planet \n Including effect of including relativistic correction')
-            plt.savefig('images-24-jan-update/va vs r.png')
+            ###plt.savefig('images-24-jan-update/va vs r.png')
             plt.grid(which='both')
             plt.show()
         if uncorrected_vvsr == 'on':
@@ -1458,7 +1479,7 @@ class main:
 
             ax1.legend()
             ax1.set_title('Alfven Velocity Against Distance from planet')
-            plt.savefig('images-24-jan-update/va vs r.png')
+            ###plt.savefig('images-24-jan-update/va vs r.png')
             plt.grid(which='both')
             plt.show()
         return time, va_corrected_list, va_uncorrected_list, plottable_list, rs_km, points
@@ -1485,7 +1506,7 @@ class main:
         if both =='on':
             fig = plt.figure(figsize=plt.figaspect(.5))
             ax = fig.add_subplot(1, 2, 1, projection='3d')
-            x,y, z = self.plotter.make_sphere()
+            x,y, z = self.make_sphere()
             ax.plot_surface(x, y, z, color = 'yellow', zorder=100, label = 'Jupiter')
             ax.set_xlim3d(-40, 40)
             ax.set_ylim3d(-40, 40)
@@ -1534,7 +1555,7 @@ class main:
             colours = ['b','g','r','c','m','k',] # just setting this up for use later
             legend_elements = [] #MATPLOTLIB IS A PAIN
             #make the sphere 
-            x,y, z = self.plotter.make_sphere()
+            x,y, z = self.make_sphere()
             ax.plot_surface(x, y, z, color = 'yellow', zorder=100, label = 'Jupiter')
             ax.set_xlim3d(-40, 40)
             ax.set_ylim3d(-40, 40)
@@ -1589,8 +1610,8 @@ class main:
         ax.grid()
         plt.show()
 
-    def plot_B_debug_time(self, phi_lh = 69):
-        grids, gridz = self.makegrid_2d_negatives(200 ,gridsize= self.stop) #CHANGE THIS BACK TO 100 WHEN ITS WORKING
+    def plot_B_debug_time(self, phi_lh = 69, gridsize = 30):
+        grids, gridz = self.makegrid_2d_negatives(200 ,gridsize= gridsize) #CHANGE THIS BACK TO 100 WHEN ITS WORKING
         phi_rh = 360-phi_lh
         phi_lh_rad = phi_lh * np.pi/180
         phi_rh_rad = phi_rh *np.pi/180
@@ -1639,7 +1660,7 @@ class main:
         fig.colorbar(cont, label = 'B $T$')
         ax.set_aspect('equal', adjustable = 'box')
         ax.legend()
-        plt.savefig('images-24-jan-update/B side slice.png')
+        ###plt.savefig('images-24-jan-update/B side slice.png')
         plt.show() 
 
     def plot_multiple_distances(self, num = 50, direction = 'backward'):
@@ -1675,7 +1696,7 @@ class main:
         ax.grid(which = 'both')
         plt.show()
 
-    def multiple_travel_times_both_directions(self, num = 8, r = 10, equators = 'unmatched'):
+    def multiple_travel_times_both_directions(self, num = 8, r = 10):
         ''' docstring goes here ''' 
 
         ''' TO START WITH, THIS IS JUST GONNA BE ALL ON ONE PLOT, BUT IT COULD BE EXTENDED TO HAVE THEM ALL ON SEPERATE PLOTS! ''' 
@@ -1688,22 +1709,22 @@ class main:
             print('New Startpoint, ', point)
             phi_lh = point[2]
             phi_lh_deg = phi_lh * 180/np.pi
-            calc_f = self.travel_time(startpoint=point, print_time='on', direction = 'forward', equators=equators)
+            calc_f = self.travel_time(startpoint=point, print_time='on', direction = 'forward')
             print('point after calc f', point)
             point[0] = point[0]/Rj
             point[2] = 2*np.pi - point[2]
             print('amended point', point)
             #print('got here, calc_f 0 =', calc_f[0], ' point = ' ,point)
-            calc_b = self.travel_time(startpoint=point, print_time='on', direction = 'backward', equators=equators)
+            calc_b = self.travel_time(startpoint=point, print_time='on', direction = 'backward')
             time_f = calc_f[0]
             time_b = calc_b[0]
             time = time_b + time_f
             angle_time_dictionary[phi_lh] = time
         return angle_time_dictionary        
 
-    def plot_angle_vs_time_btoh_directions(self, num = 10, r = 10, equators = 'unmatched'):
+    def plot_angle_vs_time_both_directions(self, num = 50, r = 10):
         ''' generate a plot of how the travel time depends with the angle of the starting point. ''' 
-        angles_times = self.multiple_travel_times_both_directions(num=num, r=r, equators=equators)
+        angles_times = self.multiple_travel_times_both_directions(num=num, r=r)
         #print(angles_times)
         angles = list(angles_times.keys())
         times = list(angles_times.values())
@@ -1718,7 +1739,7 @@ class main:
         ax.grid()
         plt.show()
 
-    def plot_multiple_distances_both_directions(self, num = 50, r = 10, equators = 'unmatched'):
+    def plot_multiple_distances_both_directions(self, num = 50, r = 10,):
         overall_distances = []
         phis = []
         startingPoints = []
@@ -1729,13 +1750,13 @@ class main:
         for point in startingPoints:
             print('New Startpoint = ', point)
             totaldistance = 0
-            calc_f = self.travel_time(startpoint=point, print_time='on', direction = 'forward', equators=equators)
+            calc_f = self.travel_time(startpoint=point, print_time='on', direction = 'forward')
             print('point after calc f', point)
             point[0] = point[0]/Rj
             point[2] = 2*np.pi - point[2]
             print('amended point', point)
             #print('got here, calc_f 0 =', calc_f[0], ' point = ' ,point)
-            calc_b = self.travel_time(startpoint=point, print_time='on', direction = 'backward', equators=equators)
+            calc_b = self.travel_time(startpoint=point, print_time='on', direction = 'backward')
             path_taken_f = calc_f[5]
             path_taken_b = calc_b[5]
             for i in range(len(path_taken_f)-1):
@@ -1760,7 +1781,7 @@ class main:
         ax.grid(which = 'both')
         plt.show()
 
-    def plot_radial_outflow_countour(self, mdot, gridsize = 40):
+    def plot_radial_outflow_contour(self, mdot, gridsize = 40):
         gridx, gridy = self.makegrid_2d_negatives(200 ,gridsize= gridsize)
         vOutflows = []
         for i in range(len(gridy)):
@@ -1775,7 +1796,7 @@ class main:
                     vOutflows_row.append(flow_vel)
  
                     continue
-                flow_vel = self.flow_velocity(r, mdot)
+                flow_vel = self.radial_flow_velocity(r, mdot)
                 #if r < 0:
                 
                 vOutflows_row.append(flow_vel)
@@ -1795,14 +1816,13 @@ class main:
         fig.colorbar(cont, label = ' Radial Velocity $(kms^{-1})$')
         ax.set_aspect('equal', adjustable = 'box')
         ax.legend()
-        plt.savefig('images-24-jan-update/v outflow equatorial')
+        ###plt.savefig('images-24-jan-update/v outflow equatorial')
         plt.show() 
         return vOutflows
 
-    def plot_outflow_vs_alfven(self, mdot, equators = 'matched', gridsize = 20, model = 'VIP4', cansheet = 'off'):
+    def plot_outflow_vs_alfven_eq_plane(self, mdot, gridsize = 20, model = 'VIP4', cansheet = 'off'):
         ''' 
-        equators = 'matched' - spin and centrifgual axis are the same
-                 = 'unmatched' - spin and centrfigugal equators matched. 
+        this incorrerctly assumes that radial outflow is in the equatorial plane, which is not the case
 
         '''
         theta = np.pi/2
@@ -1835,7 +1855,7 @@ class main:
                 n = self.density_combined(r, theta, 2*np.pi-phi)
                 
                 B_overall = self.mag_field_at_point(r, theta, phi)
-                B_x, B_y, B_z = self.Bsph_to_Bcart(B_overall[0], B_overall[1], B_overall[2], r, theta, phi_rh)
+                B_x, B_y, B_z = self.Bsph_to_Bcart(B_overall[0], B_overall[1], B_overall[2], r, theta, phi)
                 B = np.array([B_x, B_y, B_z])
                 B = B/(1e9) #CHRIS code outputs nT
                 va = self.calculator(B, n)
@@ -1866,11 +1886,11 @@ class main:
         ax.set_ylim(-gridsize,gridsize)
         for r in np.arange(0, 115, 5):
             ax.add_patch(Circle((0,0), r, fill = False, color = 'lightgreen'))
-        ax.set(xlabel = 'X $(R_J)$ \n', ylabel = 'Y $(R_J)$', title = 'Radial Outflow vs Alfven Velocity in Equatorial Plane \n mdot = {}, equators = {}'.format(mdot, equators))
+        ax.set(xlabel = 'X $(R_J)$ \n', ylabel = 'Y $(R_J)$', title = 'Radial Outflow vs Alfven Velocity in Equatorial Plane \n mdot = {},'.format(mdot))
         fig.colorbar(cont, label = ' Alfven Velocity / Radial Velocity', ticks = levs)
         ax.set_aspect('equal', adjustable = 'box')
         ax.legend()
-        plt.savefig('images-24-jan-update/v outflow vs VA equatorial')
+        ###plt.savefig('images-24-jan-update/v outflow vs VA equatorial')
         plt.show()
 
     def diverge_rel_correction(self, startpoint = [10, np.pi/2, 200.8* np.pi/180], direction = 'forward', rtol = 0.01):
@@ -1931,13 +1951,11 @@ class main:
         ax.legend()
         plt.show()
     
-    def relativistic_correction_area_of_impact_2d(self, phi_lh_deg, equators = 'matched' ,rtol = 0.01, numpoints = 200):
+    def relativistic_correction_area_of_impact_2d(self, phi_lh_deg ,rtol = 0.01, numpoints = 200):
         ''' 
         plot the areas in which the relativistic correction has an impact on the alfven velocity
         Inputs:
         phi_lh_deg - the longitude you want to view in left handed sysIII, in degrees
-        equators - input either "matched" or "unmatched". if equators = "matched", then spin and centrifugal equators are aligned. If "unmatched" centrifugal equator is 
-                   seperately calculated
         rtol = the relative tolerance between uncorrected and corrected alfven velocity to define where the correction has an impact, default 1%
         '''
         
@@ -1978,7 +1996,7 @@ class main:
                     
                     n = self.density_within_6(r, theta, phi, n_at_6) #in order to change the density profile within 6rj, this is what should be changed. 
                     ''' use chris' mag field models code to add the magnetic field from the internally generated field and the current sheet ''' 
-                    B_overall = self.mag_field_at_point(r, theta, phi)
+                    B_overall = self.mag_field_at_point(r, theta, phi_rh)
                     B_x, B_y, B_z = self.Bsph_to_Bcart(B_overall[0], B_overall[1], B_overall[2], r, theta, phi_rh)
                     B = np.array([B_x, B_y, B_z])
                     B_tesla = B/(1e9) #CHRIS code outputs nT
@@ -2028,7 +2046,7 @@ class main:
         fig.colorbar(cont) 
         
         ax.legend()
-        plt.savefig('images-24-jan-update/where va correction matterss 2d')
+        ###plt.savefig('images-24-jan-update/where va correction matterss 2d')
         plt.show()
         '''
         ''' plot v2 ''' 
@@ -2045,17 +2063,16 @@ class main:
         ax.set_ylim(-30,30)
         for r in np.arange(0, 45, 5):
             ax.add_patch(Circle((0,0), r, fill = False, color = 'lightgreen'))
-        ax.set(xlabel = ' $(R_J)$ \n', ylabel = ' $(R_J)$', title = 'Corrected/Uncorrected Alfven velocity in phi = {:.0f} plane \n  equators = {}'.format(phi_lh_deg, equators, rtol))
+        ax.set(xlabel = ' $(R_J)$ \n', ylabel = ' $(R_J)$', title = 'Corrected/Uncorrected Alfven velocity in phi = {:.0f} plane \n '.format(phi_lh_deg, rtol))
         fig.colorbar(cont) 
         ax.set_aspect('equal', adjustable = 'box')
         ax.legend()
-        plt.savefig('images-24-jan-update/where va correction matters 2d v2')
+        ###plt.savefig('images-24-jan-update/where va correction matters 2d v2')
         plt.show()
 
-    def relativistic_correction_area_of_impact_topdown(self,equators = 'matched'):
+    def relativistic_correction_area_of_impact_topdown(self):
         ''' 
-        equators = 'matched' - spin and centrifgual axis are the same
-                 = 'unmatched' - spin and centrfigugal equators matched. 
+ 
 
         '''
         theta = np.pi/2
@@ -2076,9 +2093,8 @@ class main:
                 r = np.sqrt(x**2 + y**2)
                 phi = np.arctan2(y,x)
                 if r < 6:
-                    if firsttime == 0:
-                        n_at_6 = self.density_combined(r, theta, phi)
-                        firsttime == 1
+
+                    n_at_6 = self.density_combined(r, theta, phi)
                     
                     n = self.density_within_6(r, theta, phi, n_at_6) #in order to change the density profile within 6rj, this is what should be changed. 
                     ''' use chris' mag field models code to add the magnetic field from the internally generated field and the current sheet ''' 
@@ -2124,11 +2140,11 @@ class main:
         ax.set_ylim(-30,30)
         for r in np.arange(0, 45, 5):
             ax.add_patch(Circle((0,0), r, fill = False, color = 'firebrick'))
-        ax.set(xlabel = ' $(R_J)$ \n', ylabel = ' $(R_J)$', title = 'Corrected/Uncorrected Alfven velocity in equatorial plane \n  equators = {}'.format(equators))
+        ax.set(xlabel = ' $(R_J)$ \n', ylabel = ' $(R_J)$', title = 'Corrected/Uncorrected Alfven velocity in equatorial plane \n  ')
         fig.colorbar(cont) 
         ax.set_aspect('equal', adjustable = 'box')
         ax.legend()
-        plt.savefig('images-24-jan-update/where va correction matters 2d topdown')
+        ###plt.savefig('images-24-jan-update/where va correction matters 2d topdown')
         plt.show()
 
             
@@ -2144,19 +2160,19 @@ class main:
         
 
 
-    def difference_in_travel_time(self, r, phi_lh_rad, equators = 'unmatched'):
+    def difference_in_travel_time(self, r, phi_lh_rad):
         theta = np.pi/2
         point = [r, theta, phi_lh_rad]
         phis = []
-        calc_f = self.travel_time(startpoint=point, print_time='on', direction = 'forward', equators=equators)
+        calc_f = self.travel_time(startpoint=point, print_time='on', direction = 'forward')
         point[0] = point[0]/Rj
         point[2] = 2*np.pi - point[2]
-        calc_b = self.travel_time(startpoint=point, print_time='on', direction = 'backward', equators=equators)
+        calc_b = self.travel_time(startpoint=point, print_time='on', direction = 'backward')
         time_f = calc_f[0]
         time_b = calc_b[0]
         difference = abs(time_f - time_b)
         return difference 
-    def difference_in_tt_multi(self, r = 8, num = 10, equators = 'unmatched'):
+    def difference_in_tt_multi(self, r = 8, num = 10):
         startingPoints = []
         differences = []
         phis = []
@@ -2168,12 +2184,12 @@ class main:
             print('New Startpoint, ', point)
             phi_lh = point[2]
             phi_lh_deg = phi_lh * 180/np.pi
-            calc_f = self.travel_time(startpoint=point, print_time='on', direction = 'forward', equators=equators)
+            calc_f = self.travel_time(startpoint=point, print_time='on', direction = 'forward')
             point[0] = point[0]/Rj
             point[2] = 2*np.pi - point[2]
             print('amended point', point)
             #print('got here, calc_f 0 =', calc_f[0], ' point = ' ,point)
-            calc_b = self.travel_time(startpoint=point, print_time='on', direction = 'backward', equators=equators)
+            calc_b = self.travel_time(startpoint=point, print_time='on', direction = 'backward')
             time_f = calc_f[0]
             time_b = calc_b[0]
             difference = abs(time_b - time_f)
@@ -2225,14 +2241,11 @@ class main:
         plt.yscale("log")
         ax.set(title = 'Radial Outflow Along Centrifugal Equator And Local Alfven Velocity \n For $\u03BB_{{III}} $ Longitude of {:.1f}{} '.format(phi_lh_deg, u"\N{DEGREE SIGN}"),
          xlabel = 'R ($R_J$)',ylabel = 'Velocity ($kms^{-1}$)')
-        plt.savefig('images-24-jan-update/radial_flow_plot_better.png')
+        ###plt.savefig('images-24-jan-update/radial_flow_plot_better.png')
         plt.show()
 
-    def outflow_vs_alfven_cent_plane(self, mdot, equators = 'matched', gridsize = 20, model = 'VIP4'):
-        ''' 
-         equators = 'matched' - spin and centrifgual axis are the same
-                 = 'unmatched' - spin and centrfigugal equators matched. 
-
+    def outflow_vs_alfven_cent_plane(self, mdot, gridsize = 60):
+        '''  
         '''
         theta = np.pi/2
         gridx, gridy = self.makegrid_2d_negatives(200 ,gridsize= gridsize)
@@ -2258,26 +2271,14 @@ class main:
                     divided = va_corrected/flow_vel
                     va_over_outflow_row.append(divided)
                     continue
-                flow_vel = self.flow_velocity(r, mdot)
-                if equators == 'matched':
-                    n = self.density_same_equators(r, theta)
+                flow_vel = self.radial_flow_velocity(r, mdot)
                 phi = np.arctan2(y,x) 
-                
+               
                 cent_eq_latitude = self.centrifugal_equator(r, phi)
                 colatitude = np.pi/2 - cent_eq_latitude
-                if equators == 'unmatched':
-                    theta = colatitude
-                if equators == 'unmatched':
-                    n = self.density_combined(r, theta, 2*np.pi-phi)
-                
-                B_r, B_theta, B_phi = self.field.Internal_Field(r, theta, phi, model=model) #calculates the magnetic field due to the internal field in spherical polar that point)
-                if cansheet == 'on':
-                    B_current = self.field.CAN_sheet(r, theta, phi) #calculates the magnetic field due to the current sheet in spherical polar
-                else: 
-                    B_current = [0,0,0]
-                B_notcurrent = np.array([B_r, B_theta, B_phi]) 
-                B_overall = np.add(B_current, B_notcurrent) #adds up the total magnetic field 
-                B_x, B_y, B_z = self.Bsph_to_Bcart(B_overall[0], B_overall[1], B_overall[2], r, theta, phi)
+                n = self.density_combined(r, colatitude, 2*np.pi-phi)
+                B_overall = self.mag_field_at_point(r, colatitude, phi)
+                B_x, B_y, B_z = self.Bsph_to_Bcart(B_overall[0], B_overall[1], B_overall[2], r, colatitude, phi)
                 B = np.array([B_x, B_y, B_z])
                 B = B/(1e9) #CHRIS code outputs nT
                 va = self.calculator(B, n)
@@ -2308,13 +2309,86 @@ class main:
         ax.set_ylim(-gridsize,gridsize)
         for r in np.arange(0, 115, 5):
             ax.add_patch(Circle((0,0), r, fill = False, color = 'mediumvioletred', zorder = 5))
-        ax.set(xlabel = 'X $(R_J)$ \n', ylabel = 'Y $(R_J)$', title = 'Radial Outflow vs Alfven Velocity in Equatorial Plane \n mdot = {}, equators = {}'.format(mdot, equators))
+        ax.set(xlabel = 'X $(R_J)$ \n', ylabel = 'Y $(R_J)$', title = 'Radial Outflow vs Alfven Velocity in  Plane \n mdot = {}'.format(mdot))
         fig.colorbar(cont, label = ' Alfven Velocity / Radial Velocity', ticks = levs)
         ax.set_aspect('equal', adjustable = 'box')
         ax.legend()
-        plt.savefig('images-24-jan-update/v outflow vs VA equatorial')
+        ###plt.savefig('images-24-jan-update/v outflow vs VA equatorial')
         plt.show()
 
+    def lat_where_va_correction_matters(self, r, phi_lh_deg, step = 1*np.pi/180, rtol = 0.01
+    ,equators = 'unmatched'):
+        '''
+        input r in rj, phi sys III left handed 
+        return latitude where the relativistic correction matters
+        '''
+        '''
+        it'll probably be faster starting at vertically up and working out where it stops to matter?
+        '''
+        phi_lh_rad = phi_lh_deg * np.pi / 180
+        phi_rh_rad = 2*np.pi - phi_lh_rad
+        thetas = np.arange(2*np.pi/180, np.pi,step = step)
+        firsttime = 0
+        #print(thetas)
+        for theta in thetas:
+            n = self.density_combined(r, theta, phi_lh_rad)
+            #print(n)
+
+            B_r, B_theta, B_phi = self.field.Internal_Field(r, theta, phi_rh_rad, model=self.model) #calculates the magnetic field due to the internal field in spherical polar that point)
+            B_current = self.field.CAN_sheet(r, theta, phi_rh_rad) #calculates the magnetic field due to the current sheet in spherical polar
+            B_notcurrent = np.array([B_r, B_theta, B_phi]) 
+            B_overall = np.add(B_current, B_notcurrent)
+            B_x, B_y, B_z = self.Bsph_to_Bcart(B_overall[0], B_overall[1], B_overall[2], r, theta, phi_rh_rad)
+            
+            B = np.array([B_x, B_y, B_z])
+            B_tesla = B/(1e9) #CHRIS code outputs nT
+            va = self.calculator(B_tesla, n)
+            corrected_va = self.relativistic_correction(va)
+            if np.isclose(corrected_va, va, rtol = rtol):
+                #print(theta)
+                if firsttime ==0:
+                    value_1 = theta
+                    firsttime = 1
+                value_2 = theta
+                #print(value)
+        index_t = np.where(thetas == value_1)[0]
+        index_b = np.where(thetas == value_2)[0]
+        
+        first_theta_it_matters_colat = thetas[index_t[0]-1]
+        second_timc = thetas[index_b[0]-1]
+        
+        lat_top = np.pi/2 - first_theta_it_matters_colat
+        lat_deg_top = lat_top * 180/np.pi
+
+        lat_bottom = np.pi/2 - second_timc
+        lat_deg_bottom = lat_bottom * 180/np.pi
+        
+
+        return lat_deg_top, lat_deg_bottom
+
+    def rel_correction_latitude_contour(self, rtol = 0.01, hemisphere = 'n'):
+        ''' '''
+        rs = np.linspace(2,15, num = 5)
+        phis = np.linspace(0,360, num = 5)
+        print(rs.shape, phis.shape)
+        thetas_where_matters = []
+        for r in rs:
+            thetas_row = []
+            for phi in phis:
+                if hemisphere == 'n':
+                    theta = self.lat_where_va_correction_matters(r, phi, rtol =rtol)[0]
+                if hemisphere == 's':
+                   theta = self.lat_where_va_correction_matters(r, phi= rtol)[1] 
+                thetas_row.append(theta)
+            thetas_where_matters.append(thetas_row)
+        fig, ax = plt.subplots()
+        cont = ax.contourf(rs,phis,thetas_where_matters)
+        fig.colorbar(cont)
+        plt.show()
 
 main = main('VIP4', 'no')
-main.density_contour_meridian(200.8)
+
+#main.outflow_vs_alfven_cent_plane(1300)
+#main.alfven_topdown_equatorial_plane(gridsize = 60)
+#main.plot_radial_outflow_contour(1300)
+main.plot_Bvs_r_cent_equator(200.8)
