@@ -15,14 +15,18 @@ import matplotlib.colors as mcolors
 import scipy.special
 from matplotlib import ticker, cm
 from copy import deepcopy
+#from matplotlib.ticker import (MultipleLocator, FormatStrFormatter,
+                               #AutoMinorLocator)
 from mag_field_models import field_models
 
+plt.rcParams['legend.fontsize'] = 14
+personal_cmap = ['deeppink', 'magenta', 'darkmagenta' ,'darkorchid', 'indigo','midnightblue', 'darkblue', 'slateblue', 'dodgerblue', 'deepskyblue',  'aqua', 'aquamarine' ]
 Rj = 7.14 * (10 ** 7)
 mu_0 = 1.25663706212 * 10 ** -6
 B0 = 417000 #in nT
 plt.style.use('ggplot')
-plt.rcParams.update({'font.size': 22})
-plt.rcParams['legend.fontsize'] = 14
+plt.rcParams.update({'axes.titlesize':14})
+plt.rcParams.update({'font.size': 20})
 
 ### Author @twf2360
 class main:
@@ -41,15 +45,15 @@ class main:
 
         if self.model == 'dipole':
             self.aligned = 'yes'
-            plot_label = 'Spin Aligned Dipole Magnetic Field Approximation'
+            self.plot_label = 'Spin Aligned Dipole Magnetic Field Approximation'
 
         else:
             self.aligned = aligned
             self.field = field_models()
             if aligned == 'yes':
-                plot_label = 'VIP4 Magnetic Field With Spin Aligned Centrifugal Equator Approximation'
+                self.plot_label = 'VIP4 Magnetic Field With Spin Aligned Centrifugal Equator Approximation'
             else:
-                plot_label = 'VIP4 Magnetic Field With Non-Aligned Spin and Centrifugal Equators'
+                self.plot_label = 'VIP4 Magnetic Field With Non-Aligned Spin and Centrifugal Equators'
         self.avgIonMass = avgIonMass * 1.67 * 10**-27
         self.CML = 0
         
@@ -168,6 +172,10 @@ class main:
         return r, theta_cent, phi_cent
         
     def change_equators_cart_output(self, r, theta, phi):
+        '''
+        Input r (Rj), theta (colatitude) and phi (rh) with respect to spin axis 
+        returns x,y,z with respect to the centrifugal axis
+        '''
         r_cent = r 
         phi_cent = phi
         theta_shift = self.centrifugal_equator(r, phi)
@@ -182,7 +190,10 @@ class main:
 
 
     def complex_mag_equator(self, r, phi_lh):
-        ''' r in rj, theta colatitude, phi lh in rad''' 
+        ''' 
+        input r(rj), theta (colatitude), phi (lh)
+        returns latitude of the magnetic equator with respect to the spin equator
+        ''' 
         phi =  2 *np.pi - phi_lh #change phi to RH. 
         #phi = phi_lh
         guesses_degress = np.array([30,40,50,60,70,80,90,100,110,120,130, 140, 150], dtype = float)
@@ -207,7 +218,10 @@ class main:
     
 
     def calc_furthest_r(self, points):
-        ''' calc L shell ''' 
+        ''' 
+        input a list of points [[x,y,z],[x,y,z]...]
+        returns the furthest distance r reached by those points
+        ''' 
         rs = []
         for point in points:
             x = point[0]
@@ -223,7 +237,7 @@ class main:
     def mag_field_at_point(self, r, theta, phi):
         ''' 
         input r, theta phi where r is in Rj, theta is colatitude, and phi is RIGHT HANDED
-
+        returns magnetic field vector (in nT) at that point  
         '''
         if self.model == 'dipole':
             #Overall strength of the vector will scale with distance 
@@ -242,11 +256,12 @@ class main:
             return B_overall
 
 
-    ''' 
-    The Below to trace the magnetic field
-    '''
+  
     def plot_Bvs_r_cent_equator(self, phi_lh_deg):
-        ''' plot B vs R along the centrifugal equator '''
+        '''
+        input longitude along which you wish to investigate (in lh degrees)
+        plot B vs R along the centrifugal equator
+        '''
         rs = np.arange(6,60,0.5)
         phi_lh_rad = phi_lh_deg *np.pi/180
         phi_rh_rad = 2*np.pi - phi_lh_rad
@@ -261,8 +276,12 @@ class main:
         fig, ax = plt.subplots()
         ax.plot(rs,Bs)
         plt.show()
+
     def trace_magnetic_field(self, printing = 'off', starting_cordinates = None, one_way = 'off', break_point = 3, step = 0.001, pathing = 'forward'):
-        ''' INPUT PHI IS LH ''' 
+        ''' 
+        Calculate the magnetic field trace from startpoint (r,theta, phi) with r in ms, theta is colatitude and phi is LH
+        INPUT PHI IS LH
+         ''' 
 
         
         coordinates = starting_cordinates
@@ -337,8 +356,11 @@ class main:
 
 
 
-    def plotTrace(self):
-        plot_points = np.array(self.trace_magnetic_field(printing='off')[0])
+    def plotTrace(self, startpoint):
+        '''
+        plots the magnetic field trace from startpoint given in r(m), theta (colatitude), phi (lh)
+        '''
+        plot_points = np.array(self.trace_magnetic_field(printing='off', starting_cordinates = startpoint)[0])
 
         plottable_list = np.transpose(plot_points)
 
@@ -520,7 +542,7 @@ class main:
     
     def find_furthest_r_single_input(self, startpoint):
         ''' 
-        input start point (r, theta, phi) where r is in rj and phi is right handed 
+        input start point (r, theta, phi) where r is in rj and phi is left handed 
         return furthest rdial distance reached by that field line 
         '''
         plot_results = self.trace_magnetic_field(starting_cordinates=startpoint, one_way='off', break_point=2, step = 0.001)
@@ -585,12 +607,10 @@ class main:
         plt.grid()
         ###plt.savefig('images-24-jan-update/mag_density_profile.png')
         plt.show()
+        return rs, magBs, ns
    
    
-   
-    ''' 
-    radial functions 
-    '''
+    
     def radial_flow_velocity(self, r, mdot):
         ''' 
         inputs:
@@ -814,8 +834,8 @@ class main:
 
     
 
-    def plotting(self, density = 'on',scale_height = 'off', start = 6, end = 60, numpoints = 200):
-        radii, n_0s = self.radialOutflowFunctions.plotRadialDensity(start=start, end = stop, numpoints=numpoints)
+    def plotting_density(self, density = 'on',scale_height = 'off', start = 6, stop = 60, numpoints = 200):
+        radii, n_0s = self.plotRadialDensity(start=start, end = stop, numpoints=numpoints)
         zs =  np.linspace(start, stop, numpoints)
         ns = []
         H_rj_s = []
@@ -858,7 +878,7 @@ class main:
             ax.plot(radii, Hs, label = 'Scale Height', color = 'g')
             #plt.xscale('log')
             ax.set(xlabel='Radius (RJ)', ylabel='Scale Height ($R_J$)', title='Scale height depenence on radial distance')
-            plt.xlim(0, 100)
+            plt.xlim(0, 70)
             plt.show()
     
 
@@ -899,7 +919,10 @@ class main:
         plt.show()
 
     def equator_comparison_mag_cent(self, phi = 200, num = 200):
-        r_thetas_dict = self.meridian_slice(phi_lh = phi, num= num)[0]
+        '''
+        plot the magnetic equator vs the centrifugual equator against r, along a longitude defined by phi (lh)
+        '''
+        r_thetas_dict = self.density_contour_meridian(phi_lh = phi, num= num, field_line= 'off')[0]
         r_thetas_dict_positive_only = {k: v for (k, v) in r_thetas_dict.items() if k >= 6}
         #print(r_thetas_dict_positive_only)
         rs = list(r_thetas_dict_positive_only.keys())
@@ -982,7 +1005,7 @@ class main:
         cont = ax.contourf(grids, gridz, densities_cm_edits, cmap = 'bone', levels = levs, norm=mcolors.LogNorm())#, locator=ticker.LogLocator()) #, levels = 14)
         ax.add_patch(Circle((0,0), 1, color='y', zorder=100, label = "Jupiter"))
         ax.add_patch(Circle((0,0), 6, color='c', zorder=90, label = "Io Orbital Radius", fill = False))
-        ax.text(0.95, 0.01, 'SYS III (LH) Longitutude = {:.1f}{} '.format(phi_lh, u"\N{DEGREE SIGN}"),
+        ax.text(1.00, 0.01, 'SYS III (LH) Longitutude = {:.1f}{} '.format(phi_lh, u"\N{DEGREE SIGN}"),
         verticalalignment='bottom', horizontalalignment='right',
         transform=ax.transAxes,
         color='w', fontsize=16)
@@ -998,34 +1021,37 @@ class main:
         verticalalignment='top', horizontalalignment='left',
         transform=ax.transAxes,
         color='w', fontsize=16)
-        plot_results = self.trace_magnetic_field(starting_cordinates=[field_line_r*Rj, np.pi/2 ,phi_lh_rad], one_way=one_way, break_point=2, step = 0.001)
-        points = np.array(plot_results[0])
-        plottable_list = np.transpose(points)
-        plottable_list_rj = plottable_list/Rj
-        xs = plottable_list_rj[0]
-        ys = plottable_list_rj[1]
-        zs = plottable_list_rj[2]
-        ss = []
-        for i in range(len(xs)):
-            phi = np.arctan2(ys[i],xs[i]) 
-            ss.append(np.sqrt(xs[i]**2 + ys[i]**2)) #* np.cos(phi - phi_lh_rad )) #np.cos(phi - phi_rh_rad )
-        ax.plot(ss,zs, label = 'Field Line')
+        if field_line == 'on':
+            plot_results = self.trace_magnetic_field(starting_cordinates=[field_line_r*Rj, np.pi/2 ,phi_lh_rad], one_way=one_way, break_point=2, step = 0.001)
+            points = np.array(plot_results[0])
+            plottable_list = np.transpose(points)
+            plottable_list_rj = plottable_list/Rj
+            xs = plottable_list_rj[0]
+            ys = plottable_list_rj[1]
+            zs = plottable_list_rj[2]
+            ss = []
+            for i in range(len(xs)):
+                phi = np.arctan2(ys[i],xs[i]) 
+                ss.append(np.sqrt(xs[i]**2 + ys[i]**2)) #* np.cos(phi - phi_lh_rad )) #np.cos(phi - phi_rh_rad )
+            ax.plot(ss,zs, label = 'Field Line')
 
         ax.set_xlim(-30,30)
         ax.set_ylim(-15,15)
-        ax.set(xlabel = ' x($R_J$) \n', ylabel = 'y ($R_J$)', title = 'Density Contour Plot for Given longitude') #, title = 'CML 202 $\u03BB_{III}$')
+        ax.set(xlabel = ' X($R_J$) \n', ylabel = 'Z ($R_J$)', title = 'Density Contour Plot for Given longitude') #, title = 'CML 202 $\u03BB_{III}$')
+        ax.plot(mag_plot_points_t[0], mag_plot_points_t[1], label = 'Magnetic Equator', color = 'm')
         if self.aligned == 'no':
-            ax.plot(mag_plot_points_t[0], mag_plot_points_t[1], label = 'Magnetic Equator', color = 'm')
+            
             ax.plot(cent_plot_points_t[0], cent_plot_points_t[1], label = 'Centrifugal Equator')
             label = 'Spin Equator'
         if self.aligned == 'yes':
             label = 'Spin & Centrifugal Equator'
         ax.plot(spin_eq_plot_t[0], spin_eq_plot_t[1], label = label)
-        fig.colorbar(cont, label = 'Density $(cm^{-3})$', ticks = levs)
+        fig.colorbar(cont, label = 'Density $(cm^{-3})$')#, ticks = levs)
         ax.set_aspect('equal', adjustable = 'box')
         ax.legend()
         ###plt.savefig('images-24-jan-update/density_longitude_slice-w-options.png')
         plt.show()
+        return r_centtheta_magtheta_dict, grids, gridz, densities_cm_edits, levs, mag_plot_points_t, cent_plot_points_t, spin_eq_plot_t
     
     def phippsbagfig_recreate(self):
         phi_rh_degs = np.array([39,69,99,159,339])
@@ -1269,7 +1295,7 @@ class main:
         plt.show()
     
         
-    def travel_time(self, startpoint = [10, np.pi/2, 212* np.pi/180], direction = 'forward', path_plot = 'off', dr_plot = 'off', print_time = 'on',
+    def travel_time(self, startpoint = [10, np.pi/2, 212* np.pi/180], direction =   'forward', path_plot = 'off', dr_plot = 'off', print_time = 'on',
      va_plot ='off',b_plot = 'off', n_plot = 'off', vvsrplot = 'off', uncorrected_vvsr = 'off',
     debug_plot = 'off', nvsrplot = 'off', break_point = 2):
         '''
@@ -1630,7 +1656,7 @@ class main:
             plt.show()
         return angle_time_dictionary
 
-    def plot_angle_vs_time(self, num = 10, direction = "backward", r = 30):
+    def plot_angle_vs_time(self, num = 10, direction = "backward", r = 10):
         ''' generate a plot of how the travel time depends with the angle of the starting point. ''' 
         angles_times = self.multiple_travel_times(num=num, plot='off', direction=direction, r=r)
         #print(angles_times)
@@ -1638,17 +1664,21 @@ class main:
         times = list(angles_times.values())
         angles_degree = [x*180/np.pi for x in angles]
         times_mins = [x/60 for x in times]
-        #print(angles, times)
+        print(angles_degree, times_mins)
         fig, ax = plt.subplots()
         ax.plot(angles_degree, times_mins)
+        if r == 20 and self.aligned == 'yes':
+            ax.set_ylim(11,13)
+        if r == 6 and self.aligned == 'yes':
+            ax.set_ylim(2,4)
         if direction == 'forward':
             endpoint = 'South'
         else:
             endpoint = 'North'
-        ax.set(xlabel = 'phi $\u03BB_{III}$ (Degrees)', ylabel = 'Time (Minutes)', 
-        title ='Effect of Starting longitude In Equatorial Plane on Travel Time \n From r = {}$R_J$ to Destination: {} Hemsiphere'.format(r,endpoint))
+        ax.set(xlabel = 'Longitude $\u03BB_{III}$ (Degrees)', ylabel = 'Time (Minutes)', 
+        title ='Effect of Starting longitude In Equatorial Plane on Travel Time \n From r = {}$R_J$ to Destination: {} Hemsiphere \n {}'.format(r,endpoint, self.plot_label))
         #ax.tick_params(labelright = True)
-        ax.grid()
+        #plt.grid(which = 'both')
         plt.show()
 
     def plot_B_debug_time(self, phi_lh = 69, gridsize = 30):
@@ -2031,14 +2061,12 @@ class main:
                 ''' things are a bit more awkward in the r<6 range and so is calculated seperately '''
                 ''' first calculate density, then magnetic field, then alfven velocity, then corrected alfven velocity ''' 
                 if r < 6: 
-                    if firsttime == 0:
-                        n_at_6 = self.density_combined(r, theta, phi)
-                        firsttime == 1
                     
-                    n = self.density_within_6(r, theta, phi, n_at_6) #in order to change the density profile within 6rj, this is what should be changed. 
+                    n_at_6 = self.density_combined(6, theta, phi_lh_rad)
+                    n = self.density_within_6(r, theta, phi_lh_rad, n_at_6) #in order to change the density profile within 6rj, this is what should be changed. 
                     ''' use chris' mag field models code to add the magnetic field from the internally generated field and the current sheet ''' 
-                    B_overall = self.mag_field_at_point(r, theta, phi_rh)
-                    B_x, B_y, B_z = self.Bsph_to_Bcart(B_overall[0], B_overall[1], B_overall[2], r, theta, phi_rh)
+                    B_overall = self.mag_field_at_point(r, theta, phi)
+                    B_x, B_y, B_z = self.Bsph_to_Bcart(B_overall[0], B_overall[1], B_overall[2], r, theta, phi)
                     B = np.array([B_x, B_y, B_z])
                     B_tesla = B/(1e9) #CHRIS code outputs nT
                     va = self.calculator(B_tesla, n)
@@ -2048,10 +2076,10 @@ class main:
                     continue #after its calculated for r<6 back to the top of the loop
             
                 ''' if r>6, then density and mangetic field calculated in the same manner ''' 
-                n = self.density_combined(r, theta, phi_lh)
+                n = self.density_combined(r, theta, phi_lh_rad)
                 #print(n)
                 B_overall = self.mag_field_at_point(r, theta, phi)
-                B_x, B_y, B_z = self.Bsph_to_Bcart(B_overall[0], B_overall[1], B_overall[2], r, theta, phi_rh)
+                B_x, B_y, B_z = self.Bsph_to_Bcart(B_overall[0], B_overall[1], B_overall[2], r, theta, phi)
                 B = np.array([B_x, B_y, B_z])
                 B = np.array(B)
                 B_tesla = B/(1e9) #CHRIS code outputs nT
@@ -2099,11 +2127,11 @@ class main:
         cont = ax.contourf(grids, gridz, divided, levels = [0,0.5,0.6,0.7,0.8,0.9,0.95,0.96,0.97,0.98,0.99,1], colors = personal_cmap)#levels = [0.2,0.9])#levels = levs, # norm=mcolors.LogNorm())# locator=ticker.LogLocator())
 
         ax.add_patch(Circle((0,0), 1, color='y', zorder=100, label = "Jupiter"))
-        ax.add_patch(Circle((0,0), 6.2, color='c', zorder=90, label = "Io Orbital Radius", fill = False))
+        ax.add_patch(Circle((0,0), 6.2, color='k', zorder=90, label = "Io Orbital Radius", fill = False))
         ax.set_xlim(-30,30)
         ax.set_ylim(-30,30)
-        for r in np.arange(0, 45, 5):
-            ax.add_patch(Circle((0,0), r, fill = False, color = 'lightgreen'))
+        #for r in np.arange(0, 45, 5):
+         #   ax.add_patch(Circle((0,0), r, fill = False, color = 'lightgreen'))
         ax.set(xlabel = ' $(R_J)$ \n', ylabel = ' $(R_J)$', title = 'Corrected/Uncorrected Alfven velocity in phi = {:.0f} plane \n '.format(phi_lh_deg, rtol))
         fig.colorbar(cont) 
         ax.set_aspect('equal', adjustable = 'box')
@@ -2380,10 +2408,7 @@ class main:
             n = self.density_combined(r, theta, phi_lh_rad)
             #print(n)
 
-            B_r, B_theta, B_phi = self.field.Internal_Field(r, theta, phi_rh_rad, model=self.model) #calculates the magnetic field due to the internal field in spherical polar that point)
-            B_current = self.field.CAN_sheet(r, theta, phi_rh_rad) #calculates the magnetic field due to the current sheet in spherical polar
-            B_notcurrent = np.array([B_r, B_theta, B_phi]) 
-            B_overall = np.add(B_current, B_notcurrent)
+            B_overall = self.mag_field_at_point(r, theta, phi_rh_rad)
             B_x, B_y, B_z = self.Bsph_to_Bcart(B_overall[0], B_overall[1], B_overall[2], r, theta, phi_rh_rad)
             
             B = np.array([B_x, B_y, B_z])
@@ -2412,10 +2437,10 @@ class main:
 
         return lat_deg_top, lat_deg_bottom
 
-    def rel_correction_latitude_contour(self, rtol = 0.01, hemisphere = 'n'):
+    def rel_correction_latitude_contour(self, rtol = 0.01, hemisphere = 'n', num=50):
         ''' '''
-        rs = np.linspace(2,15, num = 5)
-        phis = np.linspace(0,360, num = 5)
+        rs = np.linspace(2,15, num = num)
+        phis = np.linspace(0,360, num = num)
         thetas_where_matters = []
         for r in rs:
             thetas_row = []
@@ -2427,19 +2452,38 @@ class main:
                 thetas_row.append(theta)
             thetas_where_matters.append(thetas_row)
         fig, ax = plt.subplots()
-        cont = ax.contourf(rs,phis,thetas_where_matters)
-        fig.colorbar(cont)
+        thetas_where_matters = np.clip(thetas_where_matters,0,90)
+        cont = ax.contourf(phis,rs,thetas_where_matters, cmap = 'bone')
+        ax.set(ylabel = 'R $(R_J)$', xlabel = 'Longitude $\u03BB_{{III}}$', title = 'tolerance = {} \n {}'.format(rtol,self.plot_label))
+        fig.colorbar(cont, label = 'Latitude')
         plt.show()
 
-main = main('VIP4', 'no', avgIonMass = 21)
+#main = main('dipole', 'no')
 
 #main.outflow_vs_alfven_cent_plane(1300)
 #main.alfven_topdown_equatorial_plane(gridsize = 60)
 #main.plot_radial_outflow_contour(1300)
-main.plot_Bvs_r_cent_equator(200.8)
-main.db6_better(10, mdots= [280, 500, 1300], stop = 80)
-main.radial_profile_B_n(200.8, start = 6, stop= 60)
-#print(main.mag_field_at_point(50, np.pi/2,0))
-#print(main.Bsph_to_Bcart(-4.085421721955571e-16, -3.3360000000000007, 0, 50, np.pi/2,0))
-#print(np.linalg.norm(main.Bsph_to_Bcart(-4.085421721955571e-16, -3.3360000000000007, 0, 50, np.pi/2,0)))
-#print(B0* (1/50)**3)
+#main.plot_Bvs_r_cent_equator(200.8)
+#main.radial_profile_B_n(200.8)
+#main.equator_comparison_mag_cent(200.8)
+#main.relativistic_correction_area_of_impact_2d(200.8)
+#main.rel_correction_latitude_contour(num=25)
+#main.plotting_density(density = 'off', scale_height = 'on')
+#main.plot_angle_vs_time(r = 6, num = 20)
+
+def compare_B_radial_dip_vs_vip(phi):
+    dip = main('dipole', 'yes')
+    vip = main('VIP4', 'no')
+    dip_results = dip.radial_profile_B_n(phi)
+    vip_results = vip.radial_profile_B_n(phi)
+    rs = dip_results[0]
+    dipBs = dip_results[1]
+    vipBs = dip_results[2]
+    fig, ax = plt.subplots()
+    ax.plot(rs, dipBs, label = 'Dipolar Field', color = 'r')
+    ax.plot(rs, vipBs, label = 'VIP4 & Current Sheet', color = 'k')
+    ax.set(xlabel = 'Distance $(R_J)$', ylabel = 'Magnetic Field Strength (nT)', title = 'title?')
+    ax.legend()
+    plt.yscale("log")
+    plt.show()
+compare_B_radial_dip_vs_vip(290.8)
