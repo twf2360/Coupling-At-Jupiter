@@ -16,12 +16,13 @@ import scipy.special
 from matplotlib import ticker, cm
 from copy import deepcopy
 from mag_field_models import field_models
-plt.rcParams.update({'font.size': 22})
-plt.rcParams['legend.fontsize'] = 14
+
 Rj = 7.14 * (10 ** 7)
 mu_0 = 1.25663706212 * 10 ** -6
 B0 = 417000 #in nT
 plt.style.use('ggplot')
+plt.rcParams.update({'font.size': 22})
+plt.rcParams['legend.fontsize'] = 14
 
 ### Author @twf2360
 class main:
@@ -229,7 +230,7 @@ class main:
             ScaleFactor = B0 * (1/r)**3
 
             #magnetic field in radial and polar direction
-            B_r = -2 * ScaleFactor * np.cos(theta)
+            B_r = - 2* ScaleFactor * np.cos(theta) #there was 2 here
             B_theta = - ScaleFactor * np.sin(theta)
             B_phi = 0
             return [B_r, B_theta, B_phi]
@@ -557,26 +558,30 @@ class main:
         ns= []
         for r in rs:
             if self.aligned  == 'no':
-                latitude_cent_equator = self.centrifugal_equator(r, phi_lh_rad)
+                latitude_cent_equator = self.centrifugal_equator(r, phi_rh_rad)
                 colat = np.pi/2 - latitude_cent_equator
             else:
                 colat = np.pi/2
             B_overall = self.mag_field_at_point(r,colat, phi_rh_rad)
-            B_x, B_y, B_z = self.Bsph_to_Bcart(B_overall[0], B_overall[1], B_overall[2], r, theta, phi_rh_rad)
+            B_x, B_y, B_z = self.Bsph_to_Bcart(B_overall[0], B_overall[1], B_overall[2], r, colat, phi_rh_rad)
             B = np.array([B_x, B_y, B_z])
             magB = np.linalg.norm(B)
             magBs.append(magB)
-            n = self.density_combined(r, colat,phi_lh_rad)
+            n = self.density_combined(r, colat, phi_lh_rad)
             ns.append(n/1e6)
             
         fig, ax1 = plt.subplots(figsize = (8,5))
         ax1.plot(rs, magBs, label = 'Magnitude of Magnetic Field $(nT)$')
+        ax1.plot([],[], color = 'k', label = 'Density ($cm^{-3}$)')
         plt.legend()
-        ax1.set(xlabel='Radius $(R_J)$', ylabel='Magnitude of Magnetic Field $(nT)$', title='magnetic Field  and Density Vs Radial Distsance in Equatorial plane')
+        ax1.set(xlabel='Radius $(R_J)$', ylabel='Magnitude of Magnetic Field $(nT)$', title='Magnetic Field  and Density Vs Radial Distsance in Equatorial plane')
         ax1.yaxis.set_ticks_position('both')
         plt.yscale("log")
         ax2 = ax1.twinx()
         ax2.plot(rs, ns, label = 'Density ($cm^{-3}$)', color = 'k')
+        ax2.set_ylabel('Density ($cm^{-3}$)')
+        
+        plt.yscale("log")
         plt.grid()
         ###plt.savefig('images-24-jan-update/mag_density_profile.png')
         plt.show()
@@ -760,6 +765,7 @@ class main:
         return H
 
     def density_combined(self,r, theta, phi_lh): 
+        
         def density(n_0, z, H):
             n = n_0 * np.exp(-z/H)**2
             return n
@@ -2236,26 +2242,31 @@ class main:
          ylabel = 'Difference in Time (Secconds)')
         plt.show()
 
-    def db6_better(self, phi_lh_deg, numpoints = 200, mdots = [500,1300,2000]):
+    def db6_better(self, phi_lh_deg, numpoints = 200, mdots = [500,1300,2000], stop = 60):
         ''' for a given longitude, calculate radial outflow velocity vs local alfven velocity'''
         ''' first, all of the outflow velocities for all of the given mdots '''
-        rs = np.linspace(6,60,numpoints)
+        rs = np.linspace(6,stop,numpoints)
         #mdots = [500,1300,2000]
         mdot_outflows = {}
         for mdot in mdots:
             outflow_for_given_mdot = []
             for r in rs:
-                outflow = self.flow_velocity(r, mdot)
+                outflow = self.radial_flow_velocity(r, mdot)
                 outflow_for_given_mdot.append(outflow)
             mdot_outflows[mdot] = outflow_for_given_mdot
 
         ''' next, we need to calc alfven velocity, at each of the r values, along centrifigul equator, for given phi '''
         vas = []
         phi_rh_rad = (360 -phi_lh_deg) *np.pi/180
+        phi_lh_rad = phi_lh_deg * np.pi/180
         for r in rs:
-            n = self.radial_density(r)
-            cent_eq_latitude = self.centrifugal_equator(r, phi_rh_rad)
-            colatitude = np.pi/2 - cent_eq_latitude
+            
+            if self.aligned == 'no':
+                cent_eq_latitude = self.centrifugal_equator(r, phi_rh_rad)
+                colatitude = np.pi/2 - cent_eq_latitude
+            else:
+                colatitude = np.pi/2
+            n = self.density_combined(r, colatitude, phi_lh_rad)
             B_overall = self.mag_field_at_point(r, colatitude, phi_rh_rad)
             B_x, B_y, B_z = self.Bsph_to_Bcart(B_overall[0], B_overall[1], B_overall[2], r, colatitude, phi_rh_rad)
             B = np.array([B_x, B_y, B_z])
@@ -2405,7 +2416,6 @@ class main:
         ''' '''
         rs = np.linspace(2,15, num = 5)
         phis = np.linspace(0,360, num = 5)
-        print(rs.shape, phis.shape)
         thetas_where_matters = []
         for r in rs:
             thetas_row = []
@@ -2421,10 +2431,15 @@ class main:
         fig.colorbar(cont)
         plt.show()
 
-main = main('VIP4', 'no')
+main = main('VIP4', 'no', avgIonMass = 21)
 
 #main.outflow_vs_alfven_cent_plane(1300)
 #main.alfven_topdown_equatorial_plane(gridsize = 60)
 #main.plot_radial_outflow_contour(1300)
-#main.plot_Bvs_r_cent_equator(200.8)
-main.radial_profile_B_n(200.8)
+main.plot_Bvs_r_cent_equator(200.8)
+main.db6_better(10, mdots= [280, 500, 1300], stop = 80)
+main.radial_profile_B_n(200.8, start = 6, stop= 60)
+#print(main.mag_field_at_point(50, np.pi/2,0))
+#print(main.Bsph_to_Bcart(-4.085421721955571e-16, -3.3360000000000007, 0, 50, np.pi/2,0))
+#print(np.linalg.norm(main.Bsph_to_Bcart(-4.085421721955571e-16, -3.3360000000000007, 0, 50, np.pi/2,0)))
+#print(B0* (1/50)**3)
