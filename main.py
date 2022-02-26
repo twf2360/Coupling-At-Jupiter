@@ -596,7 +596,7 @@ class main:
         ax1.plot(rs, magBs, label = 'Magnitude of Magnetic Field $(nT)$')
         ax1.plot([],[], color = 'k', label = 'Density ($cm^{-3}$)')
         plt.legend()
-        ax1.set(xlabel='Radius $(R_J)$', ylabel='Magnitude of Magnetic Field $(nT)$', title='Magnetic Field  and Density Vs Radial Distsance in Equatorial plane')
+        ax1.set(xlabel='Radial Distance $(R_J)$', ylabel='Magnitude of Magnetic Field $(nT)$', title='Magnetic Field  and Density Vs Radial Distsance in Centrifugal Plane \n {}'.format(self.plot_label))
         ax1.yaxis.set_ticks_position('both')
         plt.yscale("log")
         ax2 = ax1.twinx()
@@ -2390,8 +2390,7 @@ class main:
         ###plt.savefig('images-24-jan-update/v outflow vs VA equatorial')
         plt.show()
 
-    def lat_where_va_correction_matters(self, r, phi_lh_deg, step = 1*np.pi/180, rtol = 0.01
-    ,equators = 'unmatched'):
+    def lat_where_va_correction_matters(self, r, phi_lh_deg, step = 1*np.pi/180, rtol = 0.01):
         '''
         input r in rj, phi sys III left handed 
         return latitude where the relativistic correction matters
@@ -2458,18 +2457,10 @@ class main:
         fig.colorbar(cont, label = 'Latitude')
         plt.show()
 
-#main = main('dipole', 'no')
+system = main('VIP4', 'no')
+print(system.lat_where_va_correction_matters(r = 8, phi_lh_deg = 200.8, rtol = 0.05))
+print(system.find_furthest_r_single_input([10*Rj, np.pi/2 - 51.999999999999986*np.pi/180, 200.8*np.pi/2]))
 
-#main.outflow_vs_alfven_cent_plane(1300)
-#main.alfven_topdown_equatorial_plane(gridsize = 60)
-#main.plot_radial_outflow_contour(1300)
-#main.plot_Bvs_r_cent_equator(200.8)
-#main.radial_profile_B_n(200.8)
-#main.equator_comparison_mag_cent(200.8)
-#main.relativistic_correction_area_of_impact_2d(200.8)
-#main.rel_correction_latitude_contour(num=25)
-#main.plotting_density(density = 'off', scale_height = 'on')
-#main.plot_angle_vs_time(r = 6, num = 20)
 
 def compare_B_radial_dip_vs_vip(phi):
     dip = main('dipole', 'yes')
@@ -2478,12 +2469,12 @@ def compare_B_radial_dip_vs_vip(phi):
     vip_results = vip.radial_profile_B_n(phi)
     rs = dip_results[0]
     dipBs = dip_results[1]
-    vipBs = dip_results[2]
+    vipBs = vip_results[1]
     fig, ax = plt.subplots()
     ax.plot(rs, dipBs, label = 'Dipolar Field', color = 'r')
     ax.plot(rs, vipBs, label = 'VIP4 & Current Sheet', color = 'k')
-    ax.set(xlabel = 'Distance $(R_J)$', ylabel = 'Magnetic Field Strength (nT)', title = 'title?')
+    ax.set(xlabel = 'Radial Distance $(R_J)$', ylabel = 'Magnetic Field Strength (nT)', title = 'vip is super dip')
     ax.legend()
     plt.yscale("log")
     plt.show()
-compare_B_radial_dip_vs_vip(290.8)
+#compare_B_radial_dip_vs_vip(290.8)
