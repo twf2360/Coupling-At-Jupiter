@@ -603,7 +603,7 @@ class main:
         plt.grid()
         ###plt.savefig('images-24-jan-update/mag_density_profile.png')
         plt.show()
-   
+        return rs, magBs, ns
    
    
     
@@ -2448,7 +2448,7 @@ class main:
         fig.colorbar(cont, label = 'Latitude')
         plt.show()
 
-main = main('dipole', 'no')
+#main = main('dipole', 'no')
 
 #main.outflow_vs_alfven_cent_plane(1300)
 #main.alfven_topdown_equatorial_plane(gridsize = 60)
@@ -2459,5 +2459,21 @@ main = main('dipole', 'no')
 #main.relativistic_correction_area_of_impact_2d(200.8)
 #main.rel_correction_latitude_contour(num=25)
 #main.plotting_density(density = 'off', scale_height = 'on')
-main.plot_angle_vs_time(r = 6, num = 20)
+#main.plot_angle_vs_time(r = 6, num = 20)
 
+def compare_B_radial_dip_vs_vip(phi):
+    dip = main('dipole', 'yes')
+    vip = main('VIP4', 'no')
+    dip_results = dip.radial_profile_B_n(phi)
+    vip_results = vip.radial_profile_B_n(phi)
+    rs = dip_results[0]
+    dipBs = dip_results[1]
+    vipBs = dip_results[2]
+    fig, ax = plt.subplots()
+    ax.plot(rs, dipBs, label = 'Dipolar Field', color = 'r')
+    ax.plot(rs, vipBs, label = 'VIP4 & Current Sheet', color = 'k')
+    ax.set(xlabel = 'Distance $(R_J)$', ylabel = 'Magnetic Field Strength (nT)', title = 'title?')
+    ax.legend()
+    plt.yscale("log")
+    plt.show()
+compare_B_radial_dip_vs_vip(290.8)
