@@ -1423,8 +1423,8 @@ class main:
             #ax1.legend(loc=0)
 
             ax2 = ax1.twinx() 
-            ax2.plot(numbers, rs_rj, label = 'r ($R_j$)', color = 'c', linestyle ='--')
-            ax2.set_ylabel('Distance From Planet ($R_j$)', color = 'c')
+            ax2.plot(numbers, rs_rj, label = 'r ($R_J$)', color = 'c', linestyle ='--')
+            ax2.set_ylabel('Distance From Planet ($R_J$)', color = 'c')
             ax2.tick_params(axis='y', labelcolor='c')
             #ax2.legend(loc = 1)
             #plt.legend()
@@ -1444,7 +1444,7 @@ class main:
             ax2 = ax1.twinx() 
             #ax2.plot(numbers_r, rs_rj_popped, label = 'Distance from planet ($R_J$)', color = 'r', linestyle ='-')
             ax2.plot(numbers_r, rs_rj, label = 'Distance from planet ($R_J$)', color = 'r', linestyle ='-')
-            ax2.set_ylabel('R ($R_J$)', color = 'r')
+            ax2.set_ylabel('S ($R_J$)', color = 'r')
             ax2.tick_params(axis='y', labelcolor='r')
             #ax2.legend()
             #plt.grid(True)
@@ -1464,8 +1464,8 @@ class main:
             #ax1.legend(loc=0)
             numbers_r = list(range(len(rs_rj)))
             ax2 = ax1.twinx() 
-            ax2.plot(numbers_r, rs_rj, label = 'r ($R_j$)', color = 'c', linestyle ='--')
-            ax2.set_ylabel('Distance From Planet ($R_j$)', color = 'c')
+            ax2.plot(numbers_r, rs_rj, label = 'S ($R_J$)', color = 'c', linestyle ='--')
+            ax2.set_ylabel('Distance From Planet ($R_J$)', color = 'c')
             ax2.tick_params(axis='y', labelcolor='c')
             #ax2.legend(loc = 1)
             #plt.legend()
@@ -1475,7 +1475,7 @@ class main:
             fig, ax1 = plt.subplots()
             numbers_n = list(range(len(n_along_path)))
             
-            ax1.plot(numbers_n, n_along_path, label = 'n along path', color = 'k')
+            ax1.plot(numbers_n, n_along_path, label = 'Number Density Along Path', color = 'k')
             ax1.set_xlabel('Point Index')
             ax1.set_ylabel('N Along Path', color = 'k')
             ax1.tick_params(axis='y', labelcolor='k')
@@ -1527,10 +1527,10 @@ class main:
             plt.show()
         if vvsrplot == 'on':
             fig, ax1 = plt.subplots()
-            ax1.plot(rs_rj[:-1], va_corrected_list, label = '$v_A$ corrected ($ms^{-1}$)', color = 'c')
-            ax1.set_xlabel('R $(R_J)$')
+            ax1.plot(rs_rj[:-1], va_corrected_list, label = '$V_A$ corrected ($ms^{-1}$)', color = 'c')
+            ax1.set_xlabel('S $(R_J)$')
             ax1.set_ylabel('Alfven Velocity ($ms^{-1}$)', color = 'b')
-            ax1.plot(rs_rj[:-1], va_uncorrected_list, label = '$v_A$ uncorrected ($ms^{-1}$)', color = 'b', linestyle ='--')
+            ax1.plot(rs_rj[:-1], va_uncorrected_list, label = '$V_A$ uncorrected ($ms^{-1}$)', color = 'b', linestyle ='--')
 
             ax1.legend()
             ax1.set_title('Alfven Velocity Against Distance from planet \n Including effect of including relativistic correction')
@@ -2139,9 +2139,8 @@ class main:
         ###plt.savefig('images-24-jan-update/where va correction matters 2d v2')
         plt.show()
 
-    def relativistic_correction_area_of_impact_topdown(self):
+    def relativistic_correction_area_of_impact_eq_plane(self):
         ''' 
- 
 
         '''
         theta = np.pi/2
@@ -2347,9 +2346,11 @@ class main:
                     continue
                 flow_vel = self.radial_flow_velocity(r, mdot)
                 phi = np.arctan2(y,x) 
-               
-                cent_eq_latitude = self.centrifugal_equator(r, phi)
-                colatitude = np.pi/2 - cent_eq_latitude
+                if self.aligned == 'yes':
+                   colatitude = np.pi/2
+                if self.aligned == 'no': 
+                    cent_eq_latitude = self.centrifugal_equator(r, phi)
+                    colatitude = np.pi/2 - cent_eq_latitude
                 n = self.density_combined(r, colatitude, 2*np.pi-phi)
                 B_overall = self.mag_field_at_point(r, colatitude, phi)
                 B_x, B_y, B_z = self.Bsph_to_Bcart(B_overall[0], B_overall[1], B_overall[2], r, colatitude, phi)
@@ -2383,9 +2384,10 @@ class main:
         ax.set_ylim(-gridsize,gridsize)
         for r in np.arange(0, 115, 5):
             ax.add_patch(Circle((0,0), r, fill = False, color = 'mediumvioletred', zorder = 5))
-        ax.set(xlabel = 'X $(R_J)$ \n', ylabel = 'Y $(R_J)$', title = 'Radial Outflow vs Alfven Velocity in  Plane \n mdot = {}'.format(mdot))
+        ax.set(xlabel = 'X $(R_J)$ \n', ylabel = 'Y $(R_J)$', title = 'Radial Outflow vs Alfven Velocity in Centtrifugal Plane \n mdot = {} \n {}'.format(mdot, self.plot_label))
         fig.colorbar(cont, label = ' Alfven Velocity / Radial Velocity', ticks = levs)
         ax.set_aspect('equal', adjustable = 'box')
+        ax.grid(False)
         ax.legend()
         ###plt.savefig('images-24-jan-update/v outflow vs VA equatorial')
         plt.show()
@@ -2456,25 +2458,99 @@ class main:
         ax.set(ylabel = 'R $(R_J)$', xlabel = 'Longitude $\u03BB_{{III}}$', title = 'tolerance = {} \n {}'.format(rtol,self.plot_label))
         fig.colorbar(cont, label = 'Latitude')
         plt.show()
+    def va_along_field_line(self, startpoint = [10, np.pi/2, 200.8*np.pi/180], breakpoint= 2, direction = 'forward', uncorrected = 'off'):
+        startpoint[0] = startpoint[0]*Rj
+        phi_lh = startpoint[2]
+        field_line = self.trace_magnetic_field(starting_cordinates=startpoint, one_way='on', break_point=breakpoint, step = 0.001, pathing= direction)
+        Bs = np.array(field_line[2]) / 1e9
+        points = np.array(field_line[0])
+        vas_corrected = []
+        vas_uncorrected = []
+        ns = []
+        rs = []
+        ss =[0]
+        for point in points:
+            x,y,z = point[0], point[1], point[2]
+            r, theta, phi_rh = self.cart_to_sph(x,y,z)
+            r = r/Rj
+            phi_lh = 2*np.pi - phi_rh
+            n = self.density_combined(r, theta, phi_lh)
+            ns.append(n)
+            rs.append(r)
+        for i in range(len(ns)):
+            n = ns[i]
+            B = Bs[i]
+            va_uncorrected = self.calculator(B, n)
+            va_corrected = self.relativistic_correction(va_uncorrected)
+            vas_uncorrected.append(va_uncorrected)
+            vas_corrected.append(va_corrected)
+        sumtotal = 0
+        for i in range(len(rs)-1):
+            absDifference = abs(rs[i+1] - rs[i])
+            sumtotal += absDifference
+            ss.append(sumtotal)
+        fig, ax = plt.subplots()
+        ax.plot(ss, vas_corrected, label = '$V_A$ inc. Relativistic Correction')
+        if uncorrected == 'on':
+            ax.plot(ss, vas_uncorrected, label = '$V_A$ not inc. Relativistic Correction')
+        ax.set(title = '{} \n startpoint = {}'.format(self.plot_label, startpoint), xlabel = 'Distance Along Field Line $(R_J)$', ylabel = 'Alfven Velocity')#TURN INTO KMS!
+        plt.show()
+        return ss, vas_corrected, vas_uncorrected
+        
+        
 
-system = main('VIP4', 'no')
-print(system.lat_where_va_correction_matters(r = 8, phi_lh_deg = 200.8, rtol = 0.05))
-print(system.find_furthest_r_single_input([10*Rj, np.pi/2 - 51.999999999999986*np.pi/180, 200.8*np.pi/2]))
+            
 
 
-def compare_B_radial_dip_vs_vip(phi):
-    dip = main('dipole', 'yes')
-    vip = main('VIP4', 'no')
-    dip_results = dip.radial_profile_B_n(phi)
-    vip_results = vip.radial_profile_B_n(phi)
-    rs = dip_results[0]
-    dipBs = dip_results[1]
-    vipBs = vip_results[1]
-    fig, ax = plt.subplots()
-    ax.plot(rs, dipBs, label = 'Dipolar Field', color = 'r')
-    ax.plot(rs, vipBs, label = 'VIP4 & Current Sheet', color = 'k')
-    ax.set(xlabel = 'Radial Distance $(R_J)$', ylabel = 'Magnetic Field Strength (nT)', title = 'vip is super dip')
-    ax.legend()
-    plt.yscale("log")
-    plt.show()
-#compare_B_radial_dip_vs_vip(290.8)
+system = main('dipole', 'no')
+#print(system.lat_where_va_correction_matters(r = 8, phi_lh_deg = 200.8, rtol = 0.05))
+#print(system.find_furthest_r_single_input([8*Rj, np.pi/2 - 61.0*np.pi/180, 200.8*np.pi/2]))
+#system.outflow_vs_alfven_cent_plane(mdot = 1300)
+#system.va_along_field_line(uncorrected = 'off')
+
+class comparisons:
+    def __init__(self):
+        self.dip = main('dipole', 'yes')
+        self.vip = main('VIP4', 'no')
+        self.aligned = main('VIP4', 'yes')
+
+    def compare_B_radial_dip_vs_vip(self,phi):
+        dip_results = self.dip.radial_profile_B_n(phi)
+        vip_results = self.vip.radial_profile_B_n(phi)
+        rs = dip_results[0]
+        dipBs = dip_results[1]
+        vipBs = vip_results[1]
+        fig, ax = plt.subplots()
+        ax.plot(rs, dipBs, label = 'Dipolar Field', color = 'r')
+        ax.plot(rs, vipBs, label = 'VIP4 & Current Sheet', color = 'k')
+        ax.set(xlabel = 'Radial Distance $(R_J)$', ylabel = 'Magnetic Field Strength (nT)', title = 'vip is super dip')
+        ax.legend()
+        plt.yscale("log")
+        plt.show()
+
+
+    def compare_va_along_field_lines(self, startpoint):
+        start_copy = deepcopy(startpoint)
+        start_copy_II = deepcopy(startpoint)
+        dip_result = self.dip.va_along_field_line(startpoint)
+    
+        ali_result = self.aligned.va_along_field_line(start_copy_II)
+        print(start_copy)
+        vip_result = self.vip.va_along_field_line(start_copy)
+        ss_dip, corrected_dip = dip_result[0], dip_result[1]
+        ss_vip, corrected_vip = vip_result[0], vip_result[1]
+        ss_ali, corrected_ali =ali_result[0], ali_result[1]
+        corrected_dip_km = np.array(corrected_dip)/1e3
+        corrected_vip_km = np.array(corrected_vip)/1e3
+        corrected_ali_km = np.array(corrected_ali)/1e3
+        fig, ax = plt.subplots()
+        ax.plot(ss_dip, corrected_dip_km, label ='Spin Aligned Dipole', color = 'r')
+        ax.plot(ss_vip, corrected_vip_km, label ='VIP4 Non Aligned Axes', color = 'k')
+        ax.plot(ss_ali, corrected_ali_km, label = 'VIP4 Centrifugal and Spin Equators Aligned', color = 'teal')
+        ax.set(xlabel = 'Distance Along Field Line $(R_J)$', ylabel = 'Alfven Velocity (kms$^{-1}$)', 
+        title = 'Alfven Velocity Along field line \n Starting at ({:.0f},{:.1f},{:.1f})'.format(start_copy[0]/Rj, start_copy[1]*180/np.pi, 360 - start_copy[2]*180/np.pi))
+        plt.legend()
+        plt.show()
+
+comparisons = comparisons()
+comparisons.compare_va_along_field_lines([10, np.pi/2, 200.8*np.pi/180])
