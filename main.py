@@ -2469,10 +2469,15 @@ class main:
         ns = []
         rs = []
         ss =[0]
+        latitudes = []
+        latitudes_deg = []
         for point in points:
             x,y,z = point[0], point[1], point[2]
             r, theta, phi_rh = self.cart_to_sph(x,y,z)
             r = r/Rj
+            latitude = np.pi/2 - theta
+            latitude_deg = latitude * 180/np.pi
+            latitudes_deg.append(latitude_deg)
             phi_lh = 2*np.pi - phi_rh
             n = self.density_combined(r, theta, phi_lh)
             ns.append(n)
@@ -2495,7 +2500,66 @@ class main:
             ax.plot(ss, vas_uncorrected, label = '$V_A$ not inc. Relativistic Correction')
         ax.set(title = '{} \n startpoint = {}'.format(self.plot_label, startpoint), xlabel = 'Distance Along Field Line $(R_J)$', ylabel = 'Alfven Velocity')#TURN INTO KMS!
         plt.show()
-        return ss, vas_corrected, vas_uncorrected
+        return ss, vas_corrected, vas_uncorrected, rs, latitudes_deg
+
+    def va_along_field_line_both_directions(self, startpoint = [10, np.pi/2, 200.8*np.pi/180], breakpoint= 2, direction = 'forward', uncorrected = 'off'):
+        startpoint[0] = startpoint[0]*Rj
+        #print(startpoint)
+        phi_lh = startpoint[2]
+        startpoint_copy = deepcopy(startpoint)
+        #print(startpoint_copy)
+        field_line_f = self.trace_magnetic_field(starting_cordinates=startpoint, one_way='on', break_point=breakpoint, step = 0.001, pathing= 'forward')
+        #print(startpoint_copy)
+        field_line_b = self.trace_magnetic_field(starting_cordinates=startpoint_copy, one_way='on', break_point=breakpoint, step = 0.001, pathing= 'backward')
+        Bs_f = np.array(field_line_f[2]) / 1e9
+        points_f = np.array(field_line_f[0])
+        
+        
+        Bs_b = np.array(field_line_b[2]) / 1e9
+        points_b = np.array(field_line_b[0])
+        points_b = np.flip(points_b, axis = 0)
+        Bs_b = np.flip(Bs_b, axis = 0)
+        Bs = np.append(Bs_b, Bs_f, axis = 0)
+        points = np.append(points_b, points_f, axis = 0)
+        vas_corrected = []
+        vas_uncorrected = []
+        ns = []
+        rs = []
+        ss = [0]
+        latitudes = []
+        thetas = []
+        latitudes_deg = []
+        for point in points:
+    
+            x,y,z = point[0], point[1], point[2]
+            r, theta, phi_rh = self.cart_to_sph(x,y,z)
+            r = r/Rj
+            thetas.append(theta)
+            latitude = np.pi/2 - theta
+            latitude_deg = latitude * 180/np.pi
+            latitudes_deg.append(latitude_deg)
+            latitudes.append(latitude)
+            phi_lh = 2*np.pi - phi_rh
+            n = self.density_combined(r, theta, phi_lh)
+            ns.append(n)
+            rs.append(r)
+        for i in range(len(ns)):
+            n = ns[i]
+            B = Bs[i]
+            va_uncorrected = self.calculator(B, n)
+            va_corrected = self.relativistic_correction(va_uncorrected)
+            vas_uncorrected.append(va_uncorrected)
+            vas_corrected.append(va_corrected)
+        sumtotal = 0
+        for i in range(len(rs)-1):
+            absDifference = abs(rs[i+1] - rs[i])
+            sumtotal += absDifference
+            ss.append(sumtotal)
+        #fig, ax = plt.subplots()
+        #ax.plot(thetas, vas_corrected, label = '$V_A$ inc. Relativistic Correction')
+        #plt.show()
+    
+        return ss, vas_corrected, vas_uncorrected, rs, latitudes_deg, latitudes, thetas
         
         
 
@@ -2539,7 +2603,7 @@ class comparisons:
         vip_result = self.vip.va_along_field_line(start_copy)
         ss_dip, corrected_dip = dip_result[0], dip_result[1]
         ss_vip, corrected_vip = vip_result[0], vip_result[1]
-        ss_ali, corrected_ali =ali_result[0], ali_result[1]
+        ss_ali, corrected_ali = ali_result[0], ali_result[1]
         corrected_dip_km = np.array(corrected_dip)/1e3
         corrected_vip_km = np.array(corrected_vip)/1e3
         corrected_ali_km = np.array(corrected_ali)/1e3
@@ -2552,5 +2616,53 @@ class comparisons:
         plt.legend()
         plt.show()
 
+    def compare_va_distance_from_planet(self, startpoint, breakpoint = 2):
+        direction = 'backward'
+        start_copy = deepcopy(startpoint)
+        start_copy_II = deepcopy(startpoint)
+        dip_result = self.dip.va_along_field_line(startpoint, breakpoint= breakpoint, direction = direction)
+    
+        ali_result = self.aligned.va_along_field_line(start_copy_II, breakpoint= breakpoint, direction = direction)
+        #print(start_copy)
+        vip_result = self.vip.va_along_field_line(start_copy, breakpoint= breakpoint, direction = direction)
+        rs_dip, corrected_dip = dip_result[3], dip_result[1]
+        rs_vip, corrected_vip = vip_result[3], vip_result[1]
+        rs_ali, corrected_ali =ali_result[3], ali_result[1]
+        corrected_dip_km = np.array(corrected_dip)/1e3
+        corrected_vip_km = np.array(corrected_vip)/1e3
+        corrected_ali_km = np.array(corrected_ali)/1e3
+        fig, ax = plt.subplots()
+        ax.plot(rs_dip, corrected_dip_km, label ='Spin Aligned Dipole', color = 'r')
+        ax.plot(rs_vip, corrected_vip_km, label ='VIP4 Non Aligned Axes', color = 'k')
+        ax.plot(rs_ali, corrected_ali_km, label = 'VIP4 Centrifugal and Spin Equators Aligned', color = 'teal')
+        ax.set(xlabel = 'Distance From Planet $(R_J)$', ylabel = 'Alfven Velocity (kms$^{-1}$)', 
+        title = 'Alfven Velocity Along field line \n Starting at ({:.0f},{:.1f},{:.1f})\n against distance from planet'.format(start_copy[0]/Rj, start_copy[1]*180/np.pi, 360 - start_copy[2]*180/np.pi))
+        plt.legend()
+        plt.show()
+
+    def compare_va_along_field_latitude(self, startpoint, breakpoint):
+        start_copy = deepcopy(startpoint)
+        start_copy_II = deepcopy(startpoint)
+        dip_result = self.dip.va_along_field_line_both_directions(startpoint, breakpoint= breakpoint)
+        #print(start_copy_II)
+        ali_result = self.aligned.va_along_field_line_both_directions(start_copy_II, breakpoint= breakpoint)
+        #print(start_copy)
+        vip_result = self.vip.va_along_field_line_both_directions(start_copy, breakpoint= breakpoint)
+        lats_dip, corrected_dip = dip_result[4], dip_result[1]
+        lats_vip, corrected_vip = vip_result[4], vip_result[1]
+        lats_ali, corrected_ali = ali_result[4], ali_result[1]
+        corrected_dip_km = np.array(corrected_dip)/1e3
+        corrected_vip_km = np.array(corrected_vip)/1e3
+        corrected_ali_km = np.array(corrected_ali)/1e3
+        fig, ax = plt.subplots()
+        ax.plot(lats_dip, corrected_dip_km, label ='Spin Aligned Dipole', color = 'r')
+        ax.plot(lats_vip, corrected_vip_km, label ='VIP4 Non Aligned Axes', color = 'k')
+        ax.plot(lats_ali, corrected_ali_km, label = 'VIP4 Centrifugal and Spin Equators Aligned', color = 'teal')
+        ax.set(xlabel = 'Latitude (Degrees)', ylabel = 'Alfven Velocity (kms$^{-1}$)', 
+        title = 'Alfven Velocity Along field line \n Starting at ({:.0f},{:.1f},{:.1f})\n against distance from planet'.format(start_copy[0]/Rj, start_copy[1]*180/np.pi, 360 - start_copy[2]*180/np.pi))
+        plt.legend()
+        plt.show()
+
 comparisons = comparisons()
-comparisons.compare_va_along_field_lines([10, np.pi/2, 200.8*np.pi/180])
+#comparisons.compare_va_distance_from_planet([10, np.pi/2, 200.8*np.pi/180], breakpoint = 2)
+comparisons.compare_va_along_field_latitude([10, np.pi/2, 290.8*np.pi/180], breakpoint = 6)
