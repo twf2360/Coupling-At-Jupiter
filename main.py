@@ -2448,17 +2448,23 @@ class main:
             for phi in phis:
                 if hemisphere == 'n':
                     theta = self.lat_where_va_correction_matters(r, phi, rtol =rtol)[0]
+                    destination_label = 'northern hemisphere'
                 if hemisphere == 's':
                    theta = self.lat_where_va_correction_matters(r, phi= rtol)[1] 
+                   destination_label = 'southern hemisphere'
                 thetas_row.append(theta)
             thetas_where_matters.append(thetas_row)
         fig, ax = plt.subplots()
         thetas_where_matters = np.clip(thetas_where_matters,0,90)
-        cont = ax.contourf(phis,rs,thetas_where_matters, cmap = 'bone')
-        ax.set(ylabel = 'R $(R_J)$', xlabel = 'Longitude $\u03BB_{{III}}$', title = 'tolerance = {} \n {}'.format(rtol,self.plot_label))
+        levs = np.linspace(np.amin(thetas_where_matters), np.amax(thetas_where_matters), 20)
+        cont = ax.contourf(phis,rs,thetas_where_matters, cmap = 'bone', levels = levs)
+        ax.yaxis.set_ticks_position('both')
+        ax.xaxis.set_ticks_position('both')
+        
+        ax.set(ylabel = 'R $(R_J)$', xlabel = 'Longitude $\u03BB_{{III}}$', title = 'tolerance = {} \n {} \n {}'.format(rtol,self.plot_label, destination_label))
         fig.colorbar(cont, label = 'Latitude')
         plt.show()
-    def va_along_field_line(self, startpoint = [10, np.pi/2, 200.8*np.pi/180], breakpoint= 2, direction = 'forward', uncorrected = 'off'):
+    def va_along_field_line(self, startpoint = [10, np.pi/2, 200.8*np.pi/180], breakpoint= 6, direction = 'forward', uncorrected = 'off'):
         startpoint[0] = startpoint[0]*Rj
         phi_lh = startpoint[2]
         field_line = self.trace_magnetic_field(starting_cordinates=startpoint, one_way='on', break_point=breakpoint, step = 0.001, pathing= direction)
@@ -2571,6 +2577,7 @@ system = main('dipole', 'no')
 #print(system.find_furthest_r_single_input([8*Rj, np.pi/2 - 61.0*np.pi/180, 200.8*np.pi/2]))
 #system.outflow_vs_alfven_cent_plane(mdot = 1300)
 #system.va_along_field_line(uncorrected = 'off')
+system.rel_correction_latitude_contour()
 
 class comparisons:
     def __init__(self):
@@ -2659,10 +2666,10 @@ class comparisons:
         ax.plot(lats_vip, corrected_vip_km, label ='VIP4 Non Aligned Axes', color = 'k')
         ax.plot(lats_ali, corrected_ali_km, label = 'VIP4 Centrifugal and Spin Equators Aligned', color = 'teal')
         ax.set(xlabel = 'Latitude (Degrees)', ylabel = 'Alfven Velocity (kms$^{-1}$)', 
-        title = 'Alfven Velocity Along field line \n Starting at ({:.0f},{:.1f},{:.1f})\n against distance from planet'.format(start_copy[0]/Rj, start_copy[1]*180/np.pi, 360 - start_copy[2]*180/np.pi))
+        title = 'Alfven Velocity Along field line \n Passing Through at ({:.0f},{:.1f},{:.1f}) in eq plane'.format(start_copy[0]/Rj, start_copy[1]*180/np.pi, 360 - start_copy[2]*180/np.pi))
         plt.legend()
         plt.show()
 
 comparisons = comparisons()
 #comparisons.compare_va_distance_from_planet([10, np.pi/2, 200.8*np.pi/180], breakpoint = 2)
-comparisons.compare_va_along_field_latitude([10, np.pi/2, 290.8*np.pi/180], breakpoint = 6)
+#comparisons.compare_va_along_field_latitude([10, np.pi/2, 200.8*np.pi/180], breakpoint = 6)
