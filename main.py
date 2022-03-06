@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 import json
 from mpl_toolkits.mplot3d import Axes3D
 from matplotlib.patches import Circle, PathPatch
-from matplotlib.colors import DivergingNorm
+from matplotlib.colors import TwoSlopeNorm
 from matplotlib.lines import Line2D
 import mpl_toolkits.mplot3d.art3d as art3d
 import matplotlib as mpl
@@ -18,16 +18,21 @@ from copy import deepcopy
 #from matplotlib.ticker import (MultipleLocator, FormatStrFormatter,
                                #AutoMinorLocator)
 from mag_field_models import field_models
+from labellines import labelLine, labelLines
 
 plt.rcParams['legend.fontsize'] = 14
 personal_cmap = ['deeppink', 'magenta', 'darkmagenta' ,'darkorchid', 'indigo','midnightblue', 'darkblue', 'slateblue', 'dodgerblue', 'deepskyblue',  'aqua', 'aquamarine' ]
 Rj = 7.14 * (10 ** 7)
 mu_0 = 1.25663706212 * 10 ** -6
 B0 = 417000 #in nT
-plt.style.use('ggplot')
-plt.rcParams.update({'axes.titlesize':14})
-plt.rcParams.update({'font.size': 20})
 
+plt.style.use('ggplot')
+plt.rcParams.update({'axes.titlesize':14, 'axes.spines.top': True,'axes.spines.bottom' : True, 'axes.spines.left': True, 'axes.spines.right': True, 'axes.linewidth':1, 'axes.edgecolor':'black', 'xtick.top':True, 
+'ytick.right':True, 'xtick.minor.visible':True, 'ytick.minor.visible':True, 'xtick.major.size':10, 'ytick.major.size':10, 'xtick.minor.size':5, 'ytick.minor.size':5,
+'xtick.major.width': 2, 'ytick.major.width': 2})
+plt.rcParams.update({ 'xtick.direction':'in','ytick.direction':'in'})
+
+plt.rcParams.update({'font.size': 20})
 ### Author @twf2360
 class main:
     def __init__(self, model = 'dipole', aligned='yes', avgIonMass = 21):
@@ -376,12 +381,12 @@ class main:
         #make the sphere and setup the plot
         x,y, z = self.make_sphere()
         ax.plot_surface(x, y, z, color = 'yellow', zorder=100, label = 'Jupiter')
-        ax.set_xlim3d(-40, 40)
-        ax.set_ylim3d(-40, 40)
-        ax.set_zlim3d(-40, 40)
-        ax.set_xlabel('$X, R_j$', fontsize=10)
-        ax.set_ylabel('$Y, R_J$', fontsize=10)
-        plt.title('Magnetic Field Trace using {} model, including current sheet'.format(self.model))
+        ax.set_xlim3d(-20, 20)
+        ax.set_ylim3d(-20, 20)
+        ax.set_zlim3d(-20, 20)
+        ax.set_xlabel('\n \n$X (R_J)$')#, fontsize=10)
+        ax.set_ylabel('\n \n$Y (R_J)$')#, fontsize=10)
+        #plt.title('Magnetic Field Trace using {} model, including current sheet'.format(self.model))
         #plt.legend()
         ####plt.savefig('images/mag_field_trace_{}_current.png'.format(self.model))
         plt.show()
@@ -646,13 +651,16 @@ class main:
         for r in np.linspace(start, end, numpoints):
             densities.append(self.radial_density(r))
             radii.append(r)
-        
-        
+        density_cm = np.array(densities)/1e6
+        density_eq = []
+        for r in radii:
+            density_eq.append(3.2e8 * r**(-6.9) + 9.9*r**(-1.28))
         if show == 'on':
             fig, ax = plt.subplots(figsize = (8,5))
-            ax.plot(radii, densities, label = 'Density $(m^{-3})$')
+            ax.plot(radii, density_cm, label = 'Density $(cm^{-3})$', color = 'k')
+            ax.plot(radii, density_eq, linestyle = 'dashdot', color = 'm', label = '$3.2x10^8 r^{-6.9} + 9.9r^{-1.28}$')
             ax.legend()
-            ax.set(xlabel='Radius $(R_J)$', ylabel='Density ($m^3$)', title='Density Vs Radial Distsance')
+            ax.set(xlabel='Radial Distance $(R_J)$', ylabel='Density ($cm^3$)')#, title='Density Vs Radial Distsance')
             ax.yaxis.set_ticks_position('both')
             plt.yscale("log")
             ###plt.savefig('images-24-jan-update/radial_density_profile.png')
@@ -672,15 +680,16 @@ class main:
             densities2.append(self.radial_density(r))
             radii2.append(r)
         
-        fig, (ax1, ax2) = plt.subplots(2)
-        ax1.semilogy(radii1, densities1, label = 'Density Section 1') #change to ax.plot to remove log scale
-        ax2.semilogy(radii2, densities2, label = 'Density Section 2', color = 'r') #change to ax.plot ^^
+        fig, ax1, = plt.subplots()
+        ax1.semilogy(radii1, densities1, label = 'r > $20R_J$') #change to ax.plot to remove log scale
+        ax1.semilogy(radii2, densities2, label = 'r > $50R_J$', color = 'k') #change to ax.plot ^^
         ax1.legend()
         ax1.set(ylabel='Density ($m^3$)' ,title='Density Vs Radial Distance')
-        ax1.yaxis.set_ticks_position('both')
+        #ax1.yaxis.set_ticks_position('both')
+        ax2 = ax1.twinx()
         ax2.legend()
         ax2.set(xlabel='Radius $(R_J)$', ylabel='Density ($m^{-3}$)') #, title='Density Vs Radial Distance')
-        ax2.yaxis.set_ticks_position('both')
+        #ax2.yaxis.set_ticks_position('both')
         ###plt.savefig('images-24-jan-update/radial_density_profile_two_points.png')
         plt.show()
         
@@ -872,13 +881,26 @@ class main:
             plt.show()
         
         if scale_height == 'on':
+            eq_H = []
             for r in radii:
                 Hs.append(self.scaleheight(r))
+                a1 = -0.116
+                a2 = 2.14
+                a3 = -2.05
+                a4 = 0.491
+                a5 = 0.126
+                R = np.log10(r/6) 
+                h = a1 + a2 * R + a3 * R**2 + a4 * R**3 + a5 * R**5
+                eq_H.append(10**h) 
+
             fig, ax = plt.subplots(figsize =(25,13))
-            ax.plot(radii, Hs, label = 'Scale Height', color = 'g')
+            ax.plot(radii, Hs, label = 'Calculated Scale Height', color = 'k')
+            ax.plot(radii, eq_H, label = 'Equation Result' , linestyle = 'dashdot', color = 'm')
+            plt.legend()
             #plt.xscale('log')
-            ax.set(xlabel='Radius (RJ)', ylabel='Scale Height ($R_J$)', title='Scale height depenence on radial distance')
+            ax.set(xlabel='Radial Distance $(R_J)$', ylabel='Scale Height ($R_J$)')#, title='Scale height depenence on radial distance')
             plt.xlim(0, 70)
+            #plt.xticks((5,10,20,30,50,100))
             plt.show()
     
 
@@ -922,8 +944,8 @@ class main:
         '''
         plot the magnetic equator vs the centrifugual equator against r, along a longitude defined by phi (lh)
         '''
-        r_thetas_dict = self.density_contour_meridian(phi_lh = phi, num= num, field_line= 'off')[0]
-        r_thetas_dict_positive_only = {k: v for (k, v) in r_thetas_dict.items() if k >= 6}
+        r_thetas_dict = self.density_contour_meridian(phi_lh = phi, num= num, field_line= 'off', show = 'off')[0]
+        r_thetas_dict_positive_only = {k: v for (k, v) in r_thetas_dict.items() if k >= 2} #this should be 6
         #print(r_thetas_dict_positive_only)
         rs = list(r_thetas_dict_positive_only.keys())
         thetas_c_m = list(r_thetas_dict_positive_only.values())
@@ -938,7 +960,193 @@ class main:
         ax.grid(which = 'both')
         plt.show()
 
-    def density_contour_meridian(self, phi_lh, gridsize =30,field_line_r = 10, field_line = 'on', within_6 = 'on', num = 200, one_way = 'off'):
+    def density_topdown_contour(self, gridsize = 30):
+        theta = np.pi/2
+        gridx, gridy = self.makegrid_2d_negatives(200 ,gridsize= gridsize)
+
+        #print(x_s, y_s)
+
+        ns = []
+        for i in range(len(gridx)):
+            print('new row, {} to go'.format(len(gridx)-i))
+            ns_row = [] 
+            for j in range(len(gridx)):
+                
+                x = gridx[i][j]
+                y = gridy[i][j]
+                r = np.sqrt(x**2 + y**2)
+                phi = np.arctan2(y,x)
+                phi_lh = 2*np.pi - phi
+                #print(r)
+                if r <6:
+                    ns_row.append(1e7)
+                    continue
+                n = self.density_combined(r, theta, phi_lh)
+                ns_row.append(n)
+
+            ns.append(ns_row)
+
+        ns_cm = np.array(ns)/1e6
+
+        #log_vas_km = np.log(Vas_km)
+        fig, ax = plt.subplots(figsize = (25,15))
+        lev_exp = np.arange(np.floor(np.log10(np.amin(ns_cm))-1), np.ceil(np.log10(np.amax(ns_cm))+1), step = 0.25)
+        levs = np.power(10, lev_exp)
+        cont = ax.contourf(gridx, gridy, ns_cm, cmap = 'bone', levels = levs, norm=mcolors.LogNorm())#, locator=ticker.LogLocator())
+        ax.add_patch(Circle((0,0), 1, color='y', zorder=100, label = "Jupiter"))
+        ax.add_patch(Circle((0,0), 6, color='c', zorder=2, label = "Io Orbital Radius", Fill = True))
+        ax.legend()
+        ax.set_xlim(-gridsize,gridsize)
+        ax.set_ylim(-gridsize,gridsize)
+        degrees = theta * 180 /np.pi
+        ax.set(xlabel = 'X $(R_J)$', ylabel = 'Y $(R_J)$') #, title = 'Density in the Equatorial plane \n {}')
+        fig.colorbar(cont, label = 'Number Density (cm$^{-3}$)')
+        ax.set_aspect('equal', adjustable = 'box')
+        for r in np.arange(0, 115, 5):
+            ax.add_patch(Circle((0,0), r, fill = False, color = 'firebrick', zorder=3))
+        ###plt.savefig('images-24-jan-update/va_topdown.png')
+        plt.show() 
+    def alfven_meridian_slice(self, phi_lh, gridsize = 30, field_line_r = 10, field_line = 'on', within_6 = 'on', num = 200, one_way = 'off'):
+
+        phi_lh_rad = phi_lh*np.pi/180
+        phi_rh_rad = 2*np.pi/2 - phi_lh_rad
+        
+        densities = []
+        vas = []
+        grids, gridz = self.makegrid_2d_negatives(200 ,gridsize= gridsize)
+
+        r_cent_points = np.linspace(-30, 30, num=num)
+        cent_plot_points = []
+        mag_plot_points = []
+        r_centtheta_magtheta_dict = {}
+
+        for point in r_cent_points:
+            if point > 0:
+                phi = phi_rh_rad + np.pi 
+                phi_lh_for_calc = phi_lh_rad + np.pi
+            else: 
+                phi = phi_rh_rad
+                phi_lh_for_calc = phi_lh_rad
+            if -1 < point <1: 
+                continue 
+
+            theta_mag_colat = self.complex_mag_equator(abs(point),  phi_lh_for_calc)
+            theta_mag = np.pi/2 - (theta_mag_colat -np.pi/2)
+            latitude_cent = self.centrifugal_equator(abs(point), phi)
+            theta_cent = np.pi/2 - latitude_cent
+            r_centtheta_magtheta_dict[point] = [theta_cent, theta_mag]
+            z_cent = abs(point) * np.cos(theta_cent)
+            z_mag = abs(point) * np.cos(theta_mag)
+            mag_plot_points.append([point, z_mag]) 
+            cent_plot_points.append([point, z_cent]) 
+        cent_plot_points = np.array(cent_plot_points)
+        mag_plot_points = np.array(mag_plot_points)
+
+        mag_plot_points_t = np.transpose(mag_plot_points)
+        cent_plot_points_t = np.transpose(cent_plot_points)
+        spin_eq_plot = np.array([[-30,0], [30,0]])
+        spin_eq_plot_t = np.transpose(spin_eq_plot)
+        
+        for i in range(len(gridz)):
+            print('new row, {} to go'.format(len(gridz)-i))
+            Vas_row = []
+            density_row = []
+            for j in range(len(grids)):
+                z = gridz[i][j]
+                s = grids[i][j]
+                r = np.sqrt(z**2 + s**2)
+                phi = phi_rh_rad 
+                theta = np.arctan2(s,z)
+                if r < 6:
+
+                    ''' i think this is causing problems '''
+                    
+                    if within_6 == 'on':
+                        n_at_6 = self.density_combined(r, theta, phi_lh_rad)
+                        n = self.density_within_6(r, theta, phi_lh_rad, n_at_6)
+                        density_row.append(n)
+                        B_overall = self.mag_field_at_point(r, theta, phi)
+                        B_x, B_y, B_z = self.Bsph_to_Bcart(B_overall[0], B_overall[1], B_overall[2], r, theta, phi)
+                        B = np.array([B_x, B_y, B_z])
+                        B =  B/(10**9)  #chris's code is in nT
+                        va = self.calculator(B, n)
+                        va_corrected = self.relativistic_correction(va)
+                        Vas_row.append(va_corrected)
+                        filled = False
+                    else:
+            
+                        Vas_row.append(1e6)
+                        Filled = True
+                    
+                    continue
+
+                
+                n = self.density_combined(r, theta, phi_lh_rad)
+                density_row.append(n)
+                B_overall = self.mag_field_at_point(r, theta, phi)
+                B_x, B_y, B_z = self.Bsph_to_Bcart(B_overall[0], B_overall[1], B_overall[2], r, theta, phi)
+                B = np.array([B_x, B_y, B_z])
+                B =  B/(10**9)  #chris's code is in nT
+                va = self.calculator(B, n)
+                va_corrected = self.relativistic_correction(va)
+                Vas_row.append(va_corrected)
+            densities.append(density_row)
+            vas.append(Vas_row)
+        
+        Vas_km = np.array(vas)/(1000)
+        vas_km_clip = np.clip(Vas_km, 10, 3e5)
+        vas_km_edits = np.nan_to_num(vas_km_clip, 10)
+        fig, ax = plt.subplots(figsize = (25,16))
+        #lev_exp = np.arange(np.floor(np.log10(vas_km_edits.min())-1), np.ceil(np.log10(vas_km_edits.max())+1), step = 0.25)
+        #levs = np.power(10, lev_exp)
+        cont = ax.contourf(grids, gridz, vas_km_edits, cmap = 'bone') #,levels = levs, norm=mcolors.LogNorm())#, locator=ticker.LogLocator()) #, levels = 14)
+        ax.add_patch(Circle((0,0), 1, color='y', zorder=100, label = "Jupiter"))
+        ax.add_patch(Circle((0,0), 6, color='c', zorder=90, label = "Io Orbital Radius", fill = filed))
+        ax.text(0.95, 0.01, 'SYS III (LH) Longitutude = {:.1f}{} '.format(phi_lh, u"\N{DEGREE SIGN}"),
+        verticalalignment='bottom', horizontalalignment='right',
+        transform=ax.transAxes,
+        color='w', fontsize=16)
+        if phi_lh + 180 > 360:
+            text_degree = phi_lh - 180
+        else:
+            text_degree = phi_lh + 180
+        ax.text(0.05, 0.99, 'SYS III (LH) Longitutude = {:.1f}{} '.format(text_degree, u"\N{DEGREE SIGN}"),
+        verticalalignment='top', horizontalalignment='left',
+        transform=ax.transAxes,
+        color='w', fontsize=16)
+        ax.text(0.05, 0.05, 'CML 201 $\u03BB_{III}$',
+        verticalalignment='top', horizontalalignment='left',
+        transform=ax.transAxes,
+        color='w', fontsize=16)
+        plot_results = self.trace_magnetic_field(starting_cordinates=[field_line_r*Rj, np.pi/2 ,phi_lh_rad], one_way=one_way, break_point=2, step = 0.001)
+        points = np.array(plot_results[0])
+        plottable_list = np.transpose(points)
+        plottable_list_rj = plottable_list/Rj
+        xs = plottable_list_rj[0]
+        ys = plottable_list_rj[1]
+        zs = plottable_list_rj[2]
+        ss = []
+        for i in range(len(xs)):
+            phi = np.arctan2(ys[i],xs[i]) 
+            ss.append(np.sqrt(xs[i]**2 + ys[i]**2)) #* np.cos(phi - phi_lh_rad )) #np.cos(phi - phi_rh_rad )
+        ax.plot(ss,zs, label = 'Field Line')
+
+        ax.set_xlim(-30,30)
+        ax.set_ylim(-15,15)
+        ax.set(xlabel = ' x($R_J$) \n', ylabel = 'y ($R_J$)', title = 'Density Contour Plot for Given longitude') #, title = 'CML 202 $\u03BB_{III}$')
+        if self.aligned == 'no':
+            ax.plot(mag_plot_points_t[0], mag_plot_points_t[1], label = 'Magnetic Equator', color = 'm')
+            ax.plot(cent_plot_points_t[0], cent_plot_points_t[1], label = 'Centrifugal Equator')
+            label = 'Spin Equator'
+        if self.aligned == 'yes':
+            label = 'Spin & Centrifugal Equator'
+        ax.plot(spin_eq_plot_t[0], spin_eq_plot_t[1], label = label)
+        fig.colorbar(cont, label = 'Va $(Kms^{-1})$')#, ticks = levs)
+        ax.set_aspect('equal', adjustable = 'box')
+        ax.legend()
+        ###plt.savefig('images-24-jan-update/density_longitude_slice-w-options.png')
+        plt.show()
+    def density_contour_meridian(self, phi_lh, gridsize =30,field_line_r = 10, field_line = 'on', within_6 = 'on', num = 200, one_way = 'off', show = 'on'):
         phi_lh_rad = phi_lh*np.pi/180
         phi_rh_rad = 2*np.pi/2 - phi_lh_rad
         
@@ -1000,9 +1208,11 @@ class main:
         densities_cm = np.array(densities)/1e6
         densities_cm_edits = np.clip(densities_cm, 1e-2, 1e10)
         fig, ax = plt.subplots(figsize = (25,16))
-        lev_exp = np.arange(np.floor(np.log10(densities_cm_edits.min())-1), np.ceil(np.log10(densities_cm_edits.max())+1), step = 0.25)
+        lev_exp = np.arange(np.floor(np.log10(np.amin(densities_cm_edits))-1), np.ceil(np.log10(np.amax(densities_cm_edits))+1), step = 0.25)
         levs = np.power(10, lev_exp)
-        cont = ax.contourf(grids, gridz, densities_cm_edits, cmap = 'bone', levels = levs, norm=mcolors.LogNorm())#, locator=ticker.LogLocator()) #, levels = 14)
+        #print(levs, levs.size)
+        if show == 'on':
+            cont = ax.contourf(grids, gridz, densities_cm_edits, cmap = 'bone', levels = levs, norm=mcolors.LogNorm())#, locator=ticker.LogLocator()) #, levels = 14)
         ax.add_patch(Circle((0,0), 1, color='y', zorder=100, label = "Jupiter"))
         ax.add_patch(Circle((0,0), 6, color='c', zorder=90, label = "Io Orbital Radius", fill = False))
         ax.text(1.00, 0.01, 'SYS III (LH) Longitutude = {:.1f}{} '.format(phi_lh, u"\N{DEGREE SIGN}"),
@@ -1037,16 +1247,22 @@ class main:
 
         ax.set_xlim(-30,30)
         ax.set_ylim(-15,15)
-        ax.set(xlabel = ' X($R_J$) \n', ylabel = 'Z ($R_J$)', title = 'Density Contour Plot for Given longitude') #, title = 'CML 202 $\u03BB_{III}$')
+        ax.set(xlabel = ' X($R_J$) \n', ylabel = 'Z ($R_J$)')#, title = 'Density Contour Plot for Given longitude') #, title = 'CML 202 $\u03BB_{III}$')
         ax.plot(mag_plot_points_t[0], mag_plot_points_t[1], label = 'Magnetic Equator', color = 'm')
         if self.aligned == 'no':
             
             ax.plot(cent_plot_points_t[0], cent_plot_points_t[1], label = 'Centrifugal Equator')
             label = 'Spin Equator'
-        if self.aligned == 'yes':
+        elif self.aligned == 'yes' and self.model =='dipole':
+            label = 'Spin, Centrifugal & Magnetic Equator'
+        else:
             label = 'Spin & Centrifugal Equator'
         ax.plot(spin_eq_plot_t[0], spin_eq_plot_t[1], label = label)
-        fig.colorbar(cont, label = 'Density $(cm^{-3})$')#, ticks = levs)
+        ax.grid(False)
+        plt.tick_params(axis='both', which='both', bottom='off', top='off')#, labelbottom='off', right='off', left='off', labelleft='off')
+        if show == 'on':
+            cbar = fig.colorbar(cont, label = 'Density $(cm^{-3})$')#, ticks = levs)
+            cbar.ax.set_yticklabels(levs)
         ax.set_aspect('equal', adjustable = 'box')
         ax.legend()
         ###plt.savefig('images-24-jan-update/density_longitude_slice-w-options.png')
@@ -1069,13 +1285,14 @@ class main:
             thetas_phis[phi] = thetas
         fig, ax = plt.subplots()
         for key in thetas_phis:
-            ax.plot(rs, thetas_phis[key], label = 'elon = {:.1f}'.format(key * 180/np.pi))
+            ax.plot(rs, thetas_phis[key], label = ' $\u03BB_{{III}}$ = {:.1f}'.format(key * 180/np.pi))
+        labelLines(ax.get_lines(), zorder=2.5)
 
         ax.grid()
-        ax.legend()
+        #ax.legend()
         ax.yaxis.set_ticks_position('both')
-        ax.set(title = 'Radial Distance vs Longitude of centrifugual equator',
-         xlabel = 'R ($R_J$)',ylabel = 'Theta')
+        #ax.set(title = 'Radial Distance vs Longitude of centrifugual equator',
+        ax.set(xlabel = 'Radial Distance ($R_J$)',ylabel = 'Latitude of Centrifigual Equator (Degrees)')
         ###plt.savefig('images-24-jan-update/phippsbag.png')
         plt.show()
 
@@ -1950,7 +2167,7 @@ class main:
         #levs = np.power(10, lev_exp)
         levs = [0,0.25,0.5,0.75,0.8,0.9,1,1.1,1.2,1.25,1.50,1.75,2,5,10]#, np.max(va_over_outflow)]
         plt.gca().patch.set_color('.25')
-        cont = ax.contourf(gridx, gridy, va_over_outflow, cmap = 'seismic',norm = DivergingNorm(vcenter = 1), levels = levs)#levels = levs, # norm=mcolors.LogNorm())# locator=ticker.LogLocator())
+        cont = ax.contourf(gridx, gridy, va_over_outflow, cmap = 'seismic',norm = TwoSlopeNorm(vcenter = 1), levels = levs)#levels = levs, # norm=mcolors.LogNorm())# locator=ticker.LogLocator())
         ax.add_patch(Circle((0,0), 1, color='y', zorder=100, label = "Jupiter"))
         ax.add_patch(Circle((0,0), 6.2, color='c', zorder=90, label = "Io Orbital Radius"))
         ax.set_xlim(-gridsize,gridsize)
@@ -2308,14 +2525,30 @@ class main:
             ax.plot(rs, v_kms, label = 'Radial Velocity ({} = {}Kg/s)'.format(u'\u1E41' ,key))
         vas_km = np.array(vas)/1000
         ax.plot(rs, vas_km, label = 'Local Alfven Velocity')
-        ax.grid()
+        #ax.grid()
         ax.legend()
         ax.yaxis.set_ticks_position('both')
         plt.yscale("log")
-        ax.set(title = 'Radial Outflow Along Centrifugal Equator And Local Alfven Velocity \n For $\u03BB_{{III}} $ Longitude of {:.1f}{} '.format(phi_lh_deg, u"\N{DEGREE SIGN}"),
-         xlabel = 'R ($R_J$)',ylabel = 'Velocity ($kms^{-1}$)')
+        ax.set_ylim(1,1000)
+        ax.set_xlim(0,100)
+        #ax.set(title = 'Radial Outflow Along Centrifugal Equator And Local Alfven Velocity \n For $\u03BB_{{III}} $ Longitude of {:.1f}{} '.format(phi_lh_deg, u"\N{DEGREE SIGN}"),
+        ax.set(xlabel = 'R ($R_J$)',ylabel = 'Velocity ($kms^{-1}$)')
         ###plt.savefig('images-24-jan-update/radial_flow_plot_better.png')
         plt.show()
+        return mdot_outflows, vas, rs
+    
+    def find_cross_point(self, mdots, phi_lh_deg):
+        mdot_crossing = {}
+        mdot_outflows, vas, rs= self.db6_better(phi_lh_deg=phi_lh_deg, mdots=mdots, stop = 80)
+        for key in mdot_outflows:
+            outflows = mdot_outflows[key]
+            for i in range(len(outflows)):
+                if outflows[i] > vas[i]:
+                    mdot_crossing[key] = rs[i]
+                    break
+        return mdot_crossing
+
+
 
     def outflow_vs_alfven_cent_plane(self, mdot, gridsize = 60):
         '''  
@@ -2377,14 +2610,14 @@ class main:
         #levs = np.power(10, lev_exp)
         levs = [0,0.25,0.5,0.75,0.8,0.9,1,1.1,1.2,1.25,1.50,1.75,2,5,10]#, np.max(va_over_outflow)]
         plt.gca().patch.set_color('.25')
-        cont = ax.contourf(gridx, gridy, va_over_outflow, cmap = 'seismic',norm = DivergingNorm(vcenter = 1), levels = levs)#levels = levs, # norm=mcolors.LogNorm())# locator=ticker.LogLocator())
+        cont = ax.contourf(gridx, gridy, va_over_outflow, cmap = 'seismic',norm = TwoSlopeNorm(vcenter = 1), levels = levs)#levels = levs, # norm=mcolors.LogNorm())# locator=ticker.LogLocator())
         ax.add_patch(Circle((0,0), 1, color='y', zorder=100, label = "Jupiter"))
         ax.add_patch(Circle((0,0), 6.2, color='c', zorder=2, label = "Io Orbital Radius"))
         ax.set_xlim(-gridsize,gridsize)
         ax.set_ylim(-gridsize,gridsize)
         for r in np.arange(0, 115, 5):
             ax.add_patch(Circle((0,0), r, fill = False, color = 'mediumvioletred', zorder = 5))
-        ax.set(xlabel = 'X $(R_J)$ \n', ylabel = 'Y $(R_J)$', title = 'Radial Outflow vs Alfven Velocity in Centtrifugal Plane \n mdot = {} \n {}'.format(mdot, self.plot_label))
+        ax.set(xlabel = 'X $(R_J)$ \n', ylabel = 'Y $(R_J)$')#, title = 'Radial Outflow vs Alfven Velocity in Centtrifugal Plane \n mdot = {} \n {}'.format(mdot, self.plot_label))
         fig.colorbar(cont, label = ' Alfven Velocity / Radial Velocity', ticks = levs)
         ax.set_aspect('equal', adjustable = 'box')
         ax.grid(False)
@@ -2575,9 +2808,17 @@ class main:
 system = main('dipole', 'no')
 #print(system.lat_where_va_correction_matters(r = 8, phi_lh_deg = 200.8, rtol = 0.05))
 #print(system.find_furthest_r_single_input([8*Rj, np.pi/2 - 61.0*np.pi/180, 200.8*np.pi/2]))
-#system.outflow_vs_alfven_cent_plane(mdot = 1300)
+#system.outflow_vs_alfven_cent_plane(mdot = 2000)
 #system.va_along_field_line(uncorrected = 'off')
-system.rel_correction_latitude_contour()
+#system.rel_correction_latitude_contour()
+#system.plotTrace([15*Rj, np.pi/2, np.pi])
+#system.db6_better(0, mdots = [280,500,1300], stop = 85)
+#system.density_topdown_contour(gridsize = 60)
+#system.phippsbagfig_recreate()
+#system.equator_comparison_mag_cent( phi = 200.9, num = 1000)
+#system.plotting_density( density = 'off',scale_height = 'on')
+#system.density_contour_meridian(200.8, field_line = 'off')
+print(system.find_cross_point(phi_lh_deg = 0, mdots = [280,500,1300]))
 
 class comparisons:
     def __init__(self):
