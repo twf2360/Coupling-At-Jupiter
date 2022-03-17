@@ -14,7 +14,7 @@ from matplotlib.colors import TwoSlopeNorm
 from matplotlib.lines import Line2D
 import mpl_toolkits.mplot3d.art3d as art3d
 import matplotlib as mpl
-from sqlalchemy import false
+#from sqlalchemy import false
 from mag_field_models import field_models
 import scipy
 import matplotlib.colors as mcolors
@@ -2581,7 +2581,7 @@ class main:
         plt.show()
         return mdot_outflows, vas, rs
     
-    def find_cross_point(self, mdots, phi_lh_deg):
+    def find_va_vo_cross_point(self, mdots, phi_lh_deg):
         mdot_crossing = {}
         mdot_outflows, vas, rs= self.db6_better(phi_lh_deg=phi_lh_deg, mdots=mdots, stop = 80)
         for key in mdot_outflows:
@@ -2945,14 +2945,89 @@ class main:
         ax.legend()
         plt.show()
         
+    def what_LT_segment(self, phi_lh_deg):
+        LT = None
+        if 0<phi_lh_deg<=45:
+            LT = 'LT21'
+        if 45<phi_lh_deg<=90:
+            LT = 'LT18'
+        if 90<phi_lh_deg<=135:
+            LT = 'LT15'
+        if 135<phi_lh_deg<=180:
+            LT = 'LT12'
+        if 180<phi_lh_deg<=225:
+            LT = 'LT09'
+        if 225<phi_lh_deg<=270:
+            LT = 'LT06'
+        if 270<phi_lh_deg<=315:
+            LT = 'LT03'        
+        if 315<phi_lh_deg<=60:
+            LT = 'LT00'
+        return LT
+
+    def what_fastest_contour(self, gridsize = 40):
+        azimuthals = []
+        r_azi = {}
+        ang_vel = np.load('angular_velocity_data/mdot_2000.0.npy', allow_pickle=True)
+        ang_vel_rs = np.load('angular_velocity_data/radii2000.0.npy',  allow_pickle=True)
+        for i in range(len(ang_vel_rs)):
+            r = ang_vel_rs[i]
+            omega = ang_vel[i]
+            r_azi[r] = r*Rj*omega*omega_J
+    
+            azimuthals.append(r*Rj*omega*omega_J)
+        azimuthals_km = np.array(azimuthals)/1e3
+        #gridx, gridy = self.makegrid_2d_negatives()'
+        #print(r_azi.keys())
+
+        gridx, gridy = self.makegrid_2d_negatives(200 ,gridsize= gridsize)
+        fastest_grid = []
+        for i in range(len(gridy)):
+            fastest_row = []
+            print('new row, {} to go'.format(len(gridx)-i))
+
+            for j in range(len(gridx)):
+                
+                x = gridx[i][j]
+                y = gridy[i][j]
+                r = np.sqrt(x**2 + y**2)
+                phi_rh_rad = np.arctan2(y,x) 
+                phi_lh_rad = 2*np.pi - phi_rh_rad
+                phi_lh_deg = phi_lh_rad * np.pi/180
+                if self.aligned == 'yes':
+                   colatitude = np.pi/2
+                   colat_deg = 90
+                if self.aligned == 'no': 
+                    cent_eq_latitude = self.centrifugal_equator(r, phi)
+                    colatitude = np.pi/2 - cent_eq_latitude
+                    colat_deg = colatitude * np.pi/180
+                va = self.alfven_at_point([r, colat_deg, phi_lh_deg])
+                flow_vel = self.flow_velocity(r, mdot = 2000)
+                azi = r_azi[r]
+                if va> azi and va >  flow_vel:
+                    fastest_val = 0
+                if flow_vel > azi and flow_vel > va:
+                    fastest_val = -1
+                if azi > flow_vel and azi >va:
+                    fastest_val = 1
+                fastest_row.append(fastest_val)
+            fastest_grid.append(fastest_row)
+        fig, ax = plt.subplots()
+        cont = ax.contourf(gridx, gridy, fastest_grid,cmap = 'seismic')
+        ax.add_patch(Circle((0,0), 1, color='y', zorder=100, label = "Jupiter"))
+        ax.add_patch(Circle((0,0), 6.2, color='c', zorder=90, label = "Io Orbital Radius"))
+        cbar = fig.colorbar(cont, label = 'label', ticks = [-1, 0 , 1])
+        cbar.set_yticklabels = ['Outflow', 'ALfven Velocity', 'Azimuthal']
+        plt.show()
+        
 
 
 system = main('dipole', 'no')
 #system.travel_time(startpoint=[15,np.pi/2, 20.8*np.pi/180])
 #system.difference_in_tt_multi(r = 15, num = 100)
 #system.plot_angle_vs_time(r= 15, num = 100)
-system.pensionerov_ang_vel_recreate()
-
+#system.pensionerov_ang_vel_recreate()
+system.what_fastest_contour()
 
 #system.travel_time(startpoint=[59, np.pi/2, 200.8*np.pi/180], direction='backward', break_point=1.5)
 #print(system.lat_where_va_correction_matters(r = 8, phi_lh_deg = 200.8, rtol = 0.05))
