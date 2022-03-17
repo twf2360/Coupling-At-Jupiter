@@ -1,14 +1,19 @@
+from cProfile import label
 import math
+from turtle import color
+from unittest import result
 import numpy as np
 import sys
 import matplotlib.pyplot as plt
 import json
 from mpl_toolkits.mplot3d import Axes3D
 from matplotlib.patches import Circle, PathPatch
+from os.path import exists
 from matplotlib.colors import TwoSlopeNorm
 from matplotlib.lines import Line2D
 import mpl_toolkits.mplot3d.art3d as art3d
 import matplotlib as mpl
+from sqlalchemy import false
 from mag_field_models import field_models
 import scipy
 import matplotlib.colors as mcolors
@@ -23,10 +28,13 @@ from labellines import labelLine, labelLines
 plt.rcParams['legend.fontsize'] = 14
 personal_cmap = ['deeppink', 'magenta', 'darkmagenta' ,'darkorchid', 'indigo','midnightblue', 'darkblue', 'slateblue', 'dodgerblue', 'deepskyblue',  'aqua', 'aquamarine' ]
 Rj = 7.14 * (10 ** 7)
+omega_J = 2*np.pi/(9.925*60*60)
 mu_0 = 1.25663706212 * 10 ** -6
 B0 = 417000 #in nT
 
 plt.style.use('ggplot')
+
+plt.rcParams.update({'figure.autolayout': True})
 plt.rcParams.update({'axes.titlesize':14, 'axes.spines.top': True,'axes.spines.bottom' : True, 'axes.spines.left': True, 'axes.spines.right': True, 'axes.linewidth':1, 'axes.edgecolor':'black', 'xtick.top':True, 
 'ytick.right':True, 'xtick.minor.visible':True, 'ytick.minor.visible':True, 'xtick.major.size':10, 'ytick.major.size':10, 'xtick.minor.size':5, 'ytick.minor.size':5,
 'xtick.major.width': 2, 'ytick.major.width': 2})
@@ -1285,7 +1293,7 @@ class main:
             thetas_phis[phi] = thetas
         fig, ax = plt.subplots()
         for key in thetas_phis:
-            ax.plot(rs, thetas_phis[key], label = ' $\u03BB_{{III}}$ = {:.1f}'.format(key * 180/np.pi))
+            ax.plot(rs, thetas_phis[key], label = ' $\u03BB_{{III}}$ = {:.1f}'.format(360 - key * 180/np.pi))
         labelLines(ax.get_lines(), zorder=2.5)
 
         ax.grid()
@@ -1304,7 +1312,6 @@ class main:
         #print('b = {}, va = {}, rho = {}, magB = {}'.format(B, Va, rho, magB))
         return Va
 
-    #add a constant phi part too! 
     def alfven_topdown_equatorial_plane(self, gridsize = 30):
         theta = np.pi/2 #<- CHANGE THIS TO VIEW A SLIGHTLY DIFFERENT PLANE
         gridx, gridy = self.makegrid_2d_negatives(200 ,gridsize= gridsize)
@@ -1336,7 +1343,7 @@ class main:
                     va_corrected = self.relativistic_correction(va)
                     Vas_row.append(va_corrected)
                     '''
-                    Vas_row.append(1e6)
+                    Vas_row.append(1e4)
                     continue
                 n = self.density_combined(r, theta, phi_lh)
                 phi = np.arctan2(y,x)
@@ -1352,21 +1359,26 @@ class main:
             Vas.append(Vas_row)
 
         Vas_km = np.array(Vas)/(1000)
-
+        lev_exp = np.arange(np.floor(np.log10(np.amin(Vas_km))-1), np.ceil(np.log10(np.amax(Vas_km))+1), step = 0.25)
+        #print(lev_exp)
+        levs = np.power(10, lev_exp)
+        print(lev_exp, levs)
         #log_vas_km = np.log(Vas_km)
         fig, ax = plt.subplots(figsize = (25,15))
-        cont = ax.contourf(gridx, gridy, Vas_km, cmap = 'bone')#, locator=ticker.LogLocator())
+        cont = ax.contourf(gridx, gridy, Vas_km, cmap = 'bone', norm = mcolors.LogNorm(), levels = levs)#, locator=ticker.LogLocator())
         ax.add_patch(Circle((0,0), 1, color='y', zorder=100, label = "Jupiter"))
-        ax.add_patch(Circle((0,0), 6, color='c', zorder=90, label = "Io Orbital Radius"))
+        ax.add_patch(Circle((0,0), 6, color='c', zorder=2, label = "Io Orbital Radius"))
         ax.legend()
         ax.set_xlim(-gridsize,gridsize)
         ax.set_ylim(-gridsize,gridsize)
         degrees = theta * 180 /np.pi
-        ax.set(xlabel = 'X $(R_J)$', ylabel = 'Y $(R_J)$', title = 'Alfven velocity in the Equatorial plane')
-        fig.colorbar(cont, label = '$V_a (km)$')
+        ax.set(xlabel = 'X $(R_J)$', ylabel = 'Y $(R_J)$')#, title = 'Alfven velocity in the Equatorial plane')
+        ax.grid(False)
+        cbar = fig.colorbar(cont, label = '$V_a (kms^{-1})$', ticks = [1,10,100,1000,10000])
+
         ax.set_aspect('equal', adjustable = 'box')
         for r in np.arange(0, 115, 5):
-            ax.add_patch(Circle((0,0), r, fill = False, color = 'firebrick'))
+            ax.add_patch(Circle((0,0), r, fill = False, color = 'firebrick', zorder = 3))
         ###plt.savefig('images-24-jan-update/va_topdown.png')
         plt.show() 
         return Vas
@@ -1440,7 +1452,7 @@ class main:
                     else:
             
                         Vas_row.append(1e6)
-                        Filled = True
+                        filled = True
                     
                     continue
 
@@ -1448,7 +1460,7 @@ class main:
                 n = self.density_combined(r, theta, phi_lh_rad)
                 density_row.append(n)
                 B_overall = self.mag_field_at_point(r, theta, phi)
-                B_x, B_y, B_z = self.Bsph_to_Bcart(B_overall[0], B_overall[1], B_overall[2], r, theta, phi)
+                B_x, B_y, B_z = self.Bsph_to_Bcart(B_overall[0], B_overall[1], B_overall[2], r, theta, phi_rh_rad)
                 B = np.array([B_x, B_y, B_z])
                 B =  B/(10**9)  #chris's code is in nT
                 va = self.calculator(B, n)
@@ -1461,11 +1473,14 @@ class main:
         vas_km_clip = np.clip(Vas_km, 10, 3e5)
         vas_km_edits = np.nan_to_num(vas_km_clip, 10)
         fig, ax = plt.subplots(figsize = (25,16))
-        #lev_exp = np.arange(np.floor(np.log10(vas_km_edits.min())-1), np.ceil(np.log10(vas_km_edits.max())+1), step = 0.25)
-        #levs = np.power(10, lev_exp)
-        cont = ax.contourf(grids, gridz, vas_km_edits, cmap = 'bone') #,levels = levs, norm=mcolors.LogNorm())#, locator=ticker.LogLocator()) #, levels = 14)
+        #print(np.log10(np.amin(vas_km_edits))-1 ,np.log10(np.amax(vas_km_edits))+1)
+        lev_exp = np.arange(np.floor(np.log10(np.amin(vas_km_edits))-1), np.ceil(np.log10(np.amax(vas_km_edits))+1), step = 0.25)
+        #print(lev_exp)
+        levs = np.power(10, lev_exp)
+        #print(levs)
+        cont = ax.contourf(grids, gridz, vas_km_edits, cmap = 'bone', levels = levs, norm=mcolors.LogNorm())#, locator=ticker.LogLocator()) #, levels = 14)
         ax.add_patch(Circle((0,0), 1, color='y', zorder=100, label = "Jupiter"))
-        ax.add_patch(Circle((0,0), 6, color='c', zorder=90, label = "Io Orbital Radius", fill = filed))
+        ax.add_patch(Circle((0,0), 6, color='c', zorder=90, label = "Io Orbital Radius", fill = filled))
         ax.text(0.95, 0.01, 'SYS III (LH) Longitutude = {:.1f}{} '.format(phi_lh, u"\N{DEGREE SIGN}"),
         verticalalignment='bottom', horizontalalignment='right',
         transform=ax.transAxes,
@@ -1482,18 +1497,19 @@ class main:
         verticalalignment='top', horizontalalignment='left',
         transform=ax.transAxes,
         color='w', fontsize=16)
-        plot_results = self.trace_magnetic_field(starting_cordinates=[field_line_r*Rj, np.pi/2 ,phi_lh_rad], one_way=one_way, break_point=2, step = 0.001)
-        points = np.array(plot_results[0])
-        plottable_list = np.transpose(points)
-        plottable_list_rj = plottable_list/Rj
-        xs = plottable_list_rj[0]
-        ys = plottable_list_rj[1]
-        zs = plottable_list_rj[2]
-        ss = []
-        for i in range(len(xs)):
-            phi = np.arctan2(ys[i],xs[i]) 
-            ss.append(np.sqrt(xs[i]**2 + ys[i]**2)) #* np.cos(phi - phi_lh_rad )) #np.cos(phi - phi_rh_rad )
-        ax.plot(ss,zs, label = 'Field Line')
+        if field_line == 'on':
+            plot_results = self.trace_magnetic_field(starting_cordinates=[field_line_r*Rj, np.pi/2 ,phi_lh_rad], one_way=one_way, break_point=2, step = 0.001)
+            points = np.array(plot_results[0])
+            plottable_list = np.transpose(points)
+            plottable_list_rj = plottable_list/Rj
+            xs = plottable_list_rj[0]
+            ys = plottable_list_rj[1]
+            zs = plottable_list_rj[2]
+            ss = []
+            for i in range(len(xs)):
+                phi = np.arctan2(ys[i],xs[i]) 
+                ss.append(np.sqrt(xs[i]**2 + ys[i]**2)) #* np.cos(phi - phi_lh_rad )) #np.cos(phi - phi_rh_rad )
+            ax.plot(ss,zs, label = 'Field Line')
 
         ax.set_xlim(-30,30)
         ax.set_ylim(-15,15)
@@ -1505,9 +1521,13 @@ class main:
         if self.aligned == 'yes':
             label = 'Spin & Centrifugal Equator'
         ax.plot(spin_eq_plot_t[0], spin_eq_plot_t[1], label = label)
-        fig.colorbar(cont, label = 'Va $(Kms^{-1})$')#, ticks = levs)
+        ticks = levs[::4]
+        cbar = plt.colorbar(cont, label = 'Va $(Kms^{-1})$', ticks = ticks, format = ticker.FixedFormatter(seq =['$10^1$', '$10^2$', '$10^3$','$10^4$','$10^5$','$10^6$']) )#, ticks = [1e1,1e2,1e3,1e4,1e5,1e6])#, ticks = levs)
+        cbar.set_ticks = ticks
+        cbar.set_yticklabels = ['$10^1$', '$10^2$', '$10^3$','$10^4$','$10^5$','$10^6$']
         ax.set_aspect('equal', adjustable = 'box')
         ax.legend()
+        print(ticks)
         ###plt.savefig('images-24-jan-update/density_longitude_slice-w-options.png')
         plt.show()
     
@@ -1523,7 +1543,7 @@ class main:
         ''' 
         saving_start = deepcopy(startpoint)
         startpoint[0] = startpoint[0]*Rj
-        phi_lh = startpoint[2]
+        #phi_lh = startpoint[2]
 
 
         plot_results = self.trace_magnetic_field(starting_cordinates=startpoint, one_way='on', break_point=break_point, step = 0.001, pathing= direction)
@@ -1546,6 +1566,7 @@ class main:
         time = 0 
         va_uncorrected_list = []
         va_corrected_list = []
+        time_uncorrected = 0
         
 
         for i in range(len(points)-1):
@@ -1590,13 +1611,15 @@ class main:
             va_corrected = self.relativistic_correction(va)
             va_corrected_list.append(va_corrected)
             
-            
+            traveltime_uncorrected = distance/va
             traveltime = distance/va_corrected
             #print('start Point {} \nEnd Point {} \nMidpoint {} \nDifference {} \nDistance {} \nva {} \nTravel time{}\n \n '.format(start_point, end_point, midpoint, difference, distance, va_corrected, traveltime ))
             time += traveltime
+            time_uncorrected += traveltime_uncorrected
         
         if print_time == 'on':
             print('travel time = {:.2f}s (= {:.1f}mins)'.format(time, time/60))
+            print('uncorrected travel time = {:.2f}s (= {:.1f}mins)'.format(time_uncorrected, time_uncorrected/60))
         '''
         As the travel time seems to be a bit weird, good idea to be plot the path etc 
         '''
@@ -1825,7 +1848,7 @@ class main:
 
         plt.show()
 
-    def multiple_travel_times(self, num = 8, plot = 'on', direction = 'forward', r = 30):
+    def multiple_travel_times(self, num = 8, plot = 'on', direction = 'forward', r = 15):
         ''' docstring goes here ''' 
 
         ''' TO START WITH, THIS IS JUST GONNA BE ALL ON ONE PLOT, BUT IT COULD BE EXTENDED TO HAVE THEM ALL ON SEPERATE PLOTS! ''' 
@@ -1892,8 +1915,8 @@ class main:
             endpoint = 'South'
         else:
             endpoint = 'North'
-        ax.set(xlabel = 'Longitude $\u03BB_{III}$ (Degrees)', ylabel = 'Time (Minutes)', 
-        title ='Effect of Starting longitude In Equatorial Plane on Travel Time \n From r = {}$R_J$ to Destination: {} Hemsiphere \n {}'.format(r,endpoint, self.plot_label))
+        ax.set(xlabel = '$\u03BB_{III}$ (Degrees)', ylabel = 'Time (Minutes)')
+        #title ='Effect of Starting longitude In Equatorial Plane on Travel Time \n From r = {}$R_J$ to Destination: {} Hemsiphere \n {}'.format(r,endpoint, self.plot_label))
         #ax.tick_params(labelright = True)
         #plt.grid(which = 'both')
         plt.show()
@@ -2140,7 +2163,7 @@ class main:
                 flow_vel = self.flow_velocity(r, mdot)
                 phi = np.arctan2(y,x) 
 
-                n = self.density_combined(r, theta, 2*np.pi-phi)
+                n = self.density_comdefined(r, theta, 2*np.pi-phi)
                 
                 B_overall = self.mag_field_at_point(r, theta, phi)
                 B_x, B_y, B_z = self.Bsph_to_Bcart(B_overall[0], B_overall[1], B_overall[2], r, theta, phi)
@@ -2481,12 +2504,12 @@ class main:
             differences.append(difference)
         fig, ax = plt.subplots()
         ax.plot(phis, differences, color = 'k')
-        ax.grid()
-        ax.set(title = 'Difference of Travel time to north Vs South hemisphere \n Dependence on longitude', xlabel = 'phi $\u03BB_{III}$ (Degrees)',
-         ylabel = 'Difference in Time (Secconds)')
+        #ax.grid()
+        ax.set( xlabel = '$\u03BB_{III}$ (Degrees)',
+         ylabel = 'Difference in Time (Secconds)') #title = 'Difference of Travel time to north Vs South hemisphere \n Dependence on longitude'
         plt.show()
 
-    def db6_better(self, phi_lh_deg, numpoints = 200, mdots = [500,1300,2000], stop = 60):
+    def db6_better(self, phi_lh_deg, numpoints = 200, mdots = [500,1300,2000], stop = 60, corotation = False, azimuthal = False):
         ''' for a given longitude, calculate radial outflow velocity vs local alfven velocity'''
         ''' first, all of the outflow velocities for all of the given mdots '''
         rs = np.linspace(6,stop,numpoints)
@@ -2499,10 +2522,12 @@ class main:
                 outflow_for_given_mdot.append(outflow)
             mdot_outflows[mdot] = outflow_for_given_mdot
 
+
         ''' next, we need to calc alfven velocity, at each of the r values, along centrifigul equator, for given phi '''
         vas = []
         phi_rh_rad = (360 -phi_lh_deg) *np.pi/180
         phi_lh_rad = phi_lh_deg * np.pi/180
+        corotations = []
         for r in rs:
             
             if self.aligned == 'no':
@@ -2517,14 +2542,32 @@ class main:
             B =  B/(10**9)  #chris's code is in nT
             va = self.calculator(B, n)
             vas.append(va)
+            if corotation:
+                corotations.append((2*np.pi/(9.93*3600))* r * Rj)
+
         
+
         ''' and then we plot ''' 
         fig, ax = plt.subplots()
+        if azimuthal:
+            azimuthals = []
+            ang_vel = np.load('angular_velocity_data/mdot_2000.0.npy', allow_pickle=True)
+            ang_vel_rs = np.load('angular_velocity_data/radii2000.0.npy',  allow_pickle=True)
+            for i in range(len(ang_vel_rs)):
+                r = ang_vel_rs[i]
+                omega = ang_vel[i]
+                azimuthals.append(r*Rj*omega*omega_J)
+            azimuthals_km = np.array(azimuthals)/1e3
+            ax.plot(ang_vel_rs, azimuthals_km, label = 'Azimuthal Velocity (Dipole Approx. {} = 2000kg/s)'.format(u'\u1E41'))
+
         for key in mdot_outflows:
             v_kms = np.array(mdot_outflows[key]) /1000
             ax.plot(rs, v_kms, label = 'Radial Velocity ({} = {}Kg/s)'.format(u'\u1E41' ,key))
         vas_km = np.array(vas)/1000
         ax.plot(rs, vas_km, label = 'Local Alfven Velocity')
+        if corotation:
+            corotations_km = np.array(corotations)/1e3
+            ax.plot(rs, corotations_km, label = 'Corotation Speed', color = 'm')
         #ax.grid()
         ax.legend()
         ax.yaxis.set_ticks_position('both')
@@ -2673,7 +2716,7 @@ class main:
 
     def rel_correction_latitude_contour(self, rtol = 0.01, hemisphere = 'n', num=50):
         ''' '''
-        rs = np.linspace(2,15, num = num)
+        rs = np.linspace(6,60, num = num)
         phis = np.linspace(0,360, num = num)
         thetas_where_matters = []
         for r in rs:
@@ -2689,13 +2732,14 @@ class main:
             thetas_where_matters.append(thetas_row)
         fig, ax = plt.subplots()
         thetas_where_matters = np.clip(thetas_where_matters,0,90)
-        levs = np.linspace(np.amin(thetas_where_matters), np.amax(thetas_where_matters), 20)
+        #levs = np.linspace(np.amin(thetas_where_matters), np.amax(thetas_where_matters), 30)
+        levs = np.arange(10,90 ,5)
         cont = ax.contourf(phis,rs,thetas_where_matters, cmap = 'bone', levels = levs)
         ax.yaxis.set_ticks_position('both')
         ax.xaxis.set_ticks_position('both')
         
-        ax.set(ylabel = 'R $(R_J)$', xlabel = 'Longitude $\u03BB_{{III}}$', title = 'tolerance = {} \n {} \n {}'.format(rtol,self.plot_label, destination_label))
-        fig.colorbar(cont, label = 'Latitude')
+        ax.set(ylabel = 'R $(R_J)$', xlabel = 'Longitude $\u03BB_{{III}}$')#), title = 'tolerance = {} \n {} \n {}'.format(rtol,self.plot_label, destination_label))
+        fig.colorbar(cont, label = 'Latitude', ticks = levs)
         plt.show()
     def va_along_field_line(self, startpoint = [10, np.pi/2, 200.8*np.pi/180], breakpoint= 6, direction = 'forward', uncorrected = 'off'):
         startpoint[0] = startpoint[0]*Rj
@@ -2737,7 +2781,8 @@ class main:
         ax.plot(ss, vas_corrected, label = '$V_A$ inc. Relativistic Correction')
         if uncorrected == 'on':
             ax.plot(ss, vas_uncorrected, label = '$V_A$ not inc. Relativistic Correction')
-        ax.set(title = '{} \n startpoint = {}'.format(self.plot_label, startpoint), xlabel = 'Distance Along Field Line $(R_J)$', ylabel = 'Alfven Velocity')#TURN INTO KMS!
+        ax.set( xlabel = 'Distance Along Field Line $(R_J)$', ylabel = 'Alfven Velocity')
+        #title = '{} \n startpoint = {}'.format(self.plot_label, startpoint)
         plt.show()
         return ss, vas_corrected, vas_uncorrected, rs, latitudes_deg
 
@@ -2794,32 +2839,135 @@ class main:
             absDifference = abs(rs[i+1] - rs[i])
             sumtotal += absDifference
             ss.append(sumtotal)
+        magBs = []
+        for b in Bs:
+            magBs.append(np.linalg.norm(b))
         #fig, ax = plt.subplots()
         #ax.plot(thetas, vas_corrected, label = '$V_A$ inc. Relativistic Correction')
         #plt.show()
     
-        return ss, vas_corrected, vas_uncorrected, rs, latitudes_deg, latitudes, thetas
-        
+        return ss, vas_corrected, vas_uncorrected, rs, latitudes_deg, latitudes, thetas, ns, magBs
+
+    def bn_along_field_line(self ,startpoint = [10, np.pi/2, 200.8*np.pi/180], breakpoint= 2, limits = False, clipped = False, show = True):
+        results = self.va_along_field_line_both_directions(startpoint, breakpoint)
+        latitudes_deg = np.array(results[4])
+        ns = np.array(results[7])/1e6
+        Bs = np.array(results[8])*1e9
+        if show:
+            fig, ax1 = plt.subplots()
+            ax1.plot(latitudes_deg, ns, color = 'k')#, label = 'Density $(cm')
+            ax1.set(xlabel = 'Latitude (Degrees)', ylabel = 'Density (cm$^{-3}$)')
+            plt.yscale('log')
+            ax2 = ax1.twinx() 
+            ax1.grid(None)
+            ax2.plot(latitudes_deg, Bs, color = 'r')# label = 'r ($R_J$)', color = 'c', linestyle ='--')
+            ax2.set_ylabel('Magnetic Field Strength (nT)', color = 'r')
+            ax2.tick_params(axis='y', labelcolor='r')
+            ax2.grid(None)
+            if limits:
+                ax1.set_xlim(-40,40)
+                ax2.set_xlim(-20,20)
+                ax1.set_ylim(0,1e3)
+                ax2.set_ylim(1e3,1e5)
+            plt.yscale('log')
+            plt.show()
+        if clipped:
+            clipped_bs = []
+            clipped_ns = []
+            clipped_latitude_degs = latitudes_deg[(latitudes_deg >= -40) & (latitudes_deg <= 40)]
+            for lat in clipped_latitude_degs:
+                index = np.where(latitudes_deg == lat)
+                #print(index[0][0])
+                clipped_bs.append(Bs[index[0][0]])
+                clipped_ns.append(ns[[index][0][0]][0])
+                print(ns[[index][0][0]][0])
+            #print(clipped_ns)
+            fig, ax1 = plt.subplots()
+            #print(clipped_ns)
+            ax1.plot(clipped_latitude_degs, clipped_ns, color = 'k')#, label = 'Density $(cm')
+            ax1.set(xlabel = 'Latitude (Degrees)', ylabel = 'Density (cm$^{-3}$)')
+            plt.yscale('log')
+            ax2 = ax1.twinx() 
+            ax1.grid(None)
+            ax2.plot(clipped_latitude_degs, clipped_bs, color = 'r')# label = 'r ($R_J$)', color = 'c', linestyle ='--')
+            ax2.set_ylabel('Magnetic Field Strength (nT)', color = 'r')
+            ax2.tick_params(axis='y', labelcolor='r')
+            ax2.grid(None)
+            plt.yscale('log')
+            plt.show()
         
 
-            
+        
+    def alfven_at_point(self, point):
+        '''
+        r in rj
+        theta in colatitude (degree)
+        phi in lh longitude (degree)
+        '''
+        dtor = np.pi/180
+        r = point[0]
+        theta = point[1] * dtor
+        phi_lh = point[2] * dtor
+        phi_rh = 2*np.pi - phi_lh
+        n = self.density_combined(r,theta,phi_lh)
+        B_overall = self.mag_field_at_point(r, theta, phi_rh)
+        B_x, B_y, B_z = self.Bsph_to_Bcart(B_overall[0], B_overall[1], B_overall[2], r, theta, phi_rh)
+        B = np.array([B_x, B_y, B_z])
+        B = B/(1e9) #CHRIS code outputs nT
+        va = self.calculator(B, n)
+        va_corrected = self.relativistic_correction(va)
+        return va_corrected
+
+
+    def pensionerov_ang_vel_recreate(self):
+        LT_segments = ['LT00', 'LT03', 'LT06', 'LT09', 'LT12' , 'LT15', 'LT18', 'LT21']
+        lt_r_vel = {}
+        for lt in LT_segments:
+            with open('angular_velocity_data/Pensionerov_et_al/{}.txt'.format(lt), 'r') as f:
+                data = f.read().splitlines()
+                data = np.array([data[i].split() for i in range(len(data))])
+                data = data.flatten()
+                data = [data[i].replace(',', '') for i in range(len(data))]
+                data = [float(data[i]) for i in range(len(data))]
+                r_ang_vel = [data[i:i+2] for i in range(0, len(data), 2)]
+                lt_r_vel[lt] = r_ang_vel
+        fig, ax = plt.subplots()
+        for key in lt_r_vel:
+            r_vel = lt_r_vel[key]
+            #print(r_vel)
+            rs_vels = np.transpose(r_vel)
+            #print(rs_vels)
+            ax.plot(rs_vels[0], rs_vels[1], label = '{}'.format(key))
+        ax.legend()
+        plt.show()
+        
 
 
 system = main('dipole', 'no')
+#system.travel_time(startpoint=[15,np.pi/2, 20.8*np.pi/180])
+#system.difference_in_tt_multi(r = 15, num = 100)
+#system.plot_angle_vs_time(r= 15, num = 100)
+system.pensionerov_ang_vel_recreate()
+
+
+#system.travel_time(startpoint=[59, np.pi/2, 200.8*np.pi/180], direction='backward', break_point=1.5)
 #print(system.lat_where_va_correction_matters(r = 8, phi_lh_deg = 200.8, rtol = 0.05))
 #print(system.find_furthest_r_single_input([8*Rj, np.pi/2 - 61.0*np.pi/180, 200.8*np.pi/2]))
-#system.outflow_vs_alfven_cent_plane(mdot = 2000)
+#system.outflow_vs_alfven_cent_plane(mdot = 1300)
 #system.va_along_field_line(uncorrected = 'off')
-#system.rel_correction_latitude_contour()
+#system.rel_correction_latitude_contour(rtol=0.05)
 #system.plotTrace([15*Rj, np.pi/2, np.pi])
-#system.db6_better(0, mdots = [280,500,1300], stop = 85)
+#system.db6_better(200.8, mdots = [2000], stop = 85, corotation = True, azimuthal= True)
 #system.density_topdown_contour(gridsize = 60)
 #system.phippsbagfig_recreate()
 #system.equator_comparison_mag_cent( phi = 200.9, num = 1000)
 #system.plotting_density( density = 'off',scale_height = 'on')
 #system.density_contour_meridian(200.8, field_line = 'off')
-print(system.find_cross_point(phi_lh_deg = 0, mdots = [280,500,1300]))
-
+#print(system.find_cross_point(phi_lh_deg = 110.8, mdots = [280,500,1300,2000]))
+#system.multiple_travel_times()
+#system.alfven_meridian_slice(200.8, field_line='off', within_6='off')
+#system.bn_along_field_line(limits=False, clipped = True, show = False)
+#system.alfven_topdown_equatorial_plane(gridsize=60)
 class comparisons:
     def __init__(self):
         self.dip = main('dipole', 'yes')
@@ -2834,8 +2982,8 @@ class comparisons:
         vipBs = vip_results[1]
         fig, ax = plt.subplots()
         ax.plot(rs, dipBs, label = 'Dipolar Field', color = 'r')
-        ax.plot(rs, vipBs, label = 'VIP4 & Current Sheet', color = 'k')
-        ax.set(xlabel = 'Radial Distance $(R_J)$', ylabel = 'Magnetic Field Strength (nT)', title = 'vip is super dip')
+        ax.plot(rs, vipBs, label = 'VIP4', color = 'k')
+        ax.set(xlabel = 'Radial Distance $(R_J)$', ylabel = 'Magnetic Field Strength (nT)')#, title = 'vip is super dip')
         ax.legend()
         plt.yscale("log")
         plt.show()
@@ -2888,9 +3036,10 @@ class comparisons:
         plt.legend()
         plt.show()
 
-    def compare_va_along_field_latitude(self, startpoint, breakpoint):
+    def compare_va_along_field_latitude(self, startpoint, breakpoint, limits = 'off', logplot = 'off', min_point = False):
         start_copy = deepcopy(startpoint)
         start_copy_II = deepcopy(startpoint)
+        print(startpoint, start_copy_II, start_copy)
         dip_result = self.dip.va_along_field_line_both_directions(startpoint, breakpoint= breakpoint)
         #print(start_copy_II)
         ali_result = self.aligned.va_along_field_line_both_directions(start_copy_II, breakpoint= breakpoint)
@@ -2906,11 +3055,117 @@ class comparisons:
         ax.plot(lats_dip, corrected_dip_km, label ='Spin Aligned Dipole', color = 'r')
         ax.plot(lats_vip, corrected_vip_km, label ='VIP4 Non Aligned Axes', color = 'k')
         ax.plot(lats_ali, corrected_ali_km, label = 'VIP4 Centrifugal and Spin Equators Aligned', color = 'teal')
-        ax.set(xlabel = 'Latitude (Degrees)', ylabel = 'Alfven Velocity (kms$^{-1}$)', 
-        title = 'Alfven Velocity Along field line \n Passing Through at ({:.0f},{:.1f},{:.1f}) in eq plane'.format(start_copy[0]/Rj, start_copy[1]*180/np.pi, 360 - start_copy[2]*180/np.pi))
+        ax.set(xlabel = 'Latitude (Degrees)', ylabel = 'Alfven Velocity (kms$^{-1}$)') 
+        #title = 'Alfven Velocity Along field line \n Passing Through at ({:.0f},{:.1f},{:.1f}) in eq plane'.format(start_copy[0]/Rj, start_copy[1]*180/np.pi, 360 - start_copy[2]*180/np.pi))
+        if limits == 'on':
+            ax.set_xlim(-20,20)
+            ax.set_ylim(0,4e3)
+        if logplot == 'on':
+            ax.set_yscale('log')
+
+        if min_point:
+            min_va_vip = np.amin(corrected_vip)
+            min_index_vip = np.where(corrected_vip == min_va_vip)
+            print(min_index_vip[0][0])
+            min_lat_vip = lats_vip[min_index_vip[0][0]]
+            print(' vip min lat = ', min_lat_vip)
+
         plt.legend()
         plt.show()
 
+    def compare_n_along_field_line(self, startpoint, limits = 'off', logplot = 'off', breakpoint = 6, max_point = True):
+        start_copy = deepcopy(startpoint)
+        start_copy_II = deepcopy(startpoint)
+        dip_result = self.dip.va_along_field_line_both_directions(startpoint, breakpoint= breakpoint)
+        #print(start_copy_II)
+        ali_result = self.aligned.va_along_field_line_both_directions(start_copy_II, breakpoint= breakpoint)
+        #print(start_copy)
+        vip_result = self.vip.va_along_field_line_both_directions(start_copy, breakpoint= breakpoint)
+        lats_dip, n_dip = dip_result[4], dip_result[7]
+        lats_vip, n_vip = vip_result[4], vip_result[7]
+        lats_ali, n_ali = ali_result[4], ali_result[7]
+        n_dip_cm = np.array(n_dip)/1e6
+        n_vip_cm = np.array(n_vip)/1e6
+        n_ali_cm = np.array(n_ali)/1e6
+        fig, ax = plt.subplots()
+        ax.plot(lats_dip, n_dip_cm, label ='Spin Aligned Dipole', color = 'r')
+        ax.plot(lats_vip, n_vip_cm, label ='VIP4 Non Aligned Axes', color = 'k')
+        ax.plot(lats_ali, n_ali_cm, label = 'VIP4 Centrifugal and Spin Equators Aligned', color = 'teal')
+        ax.set(xlabel = 'Latitude (Degrees)', ylabel = 'Density (cms$^{-1}$)') 
+        #title = 'Alfven Velocity Along field line \n Passing Through at ({:.0f},{:.1f},{:.1f}) in eq plane'.format(start_copy[0]/Rj, start_copy[1]*180/np.pi, 360 - start_copy[2]*180/np.pi))
+        if limits == 'on':
+            ax.set_xlim(-20,20)
+            ax.set_ylim(0,4e3)
+        if logplot == 'on':
+            ax.set_yscale('log')
+
+        plt.legend()
+        plt.show()
+        
+        if max_point:
+            max_n_vip = np.amax(n_vip_cm)
+            max_index_vip = np.where(n_vip_cm == max_n_vip)
+            print(max_index_vip[0][0])
+            min_lat_vip = lats_vip[max_index_vip[0][0]]
+            print(' vip max lat = ', min_lat_vip)
+            print('vip max n =', max_n_vip)
+            print('\n\n')
+
+            max_n_dip = np.amax(n_dip_cm)
+            max_index_dip = np.where(n_dip_cm == max_n_dip)
+            print(max_index_dip[0][0])
+            min_lat_dip = lats_dip[max_index_dip[0][0]]
+            print('dip max lat = ', min_lat_dip)
+            print('dip max n =', max_n_dip)
+
+
+    def compare_dist_from_planet_lat(self,startpoint,  limits = 'off', logplot = 'off', breakpoint = 6):
+        start_copy = deepcopy(startpoint)
+        start_copy_II = deepcopy(startpoint)
+        start_copy_II[2] = 2*np.pi - start_copy_II[2]
+        dip_result = self.dip.va_along_field_line_both_directions(startpoint, breakpoint= breakpoint)
+        #print(start_copy_II)
+        
+        #print(start_copy)
+        vip_result = self.vip.va_along_field_line_both_directions(start_copy, breakpoint= breakpoint)
+        lats_dip, r_dip = dip_result[4], dip_result[3]
+        lats_vip, r_vip = vip_result[4], vip_result[3]
+
+        #r_dip_rj = np.array(r_dip)/Rj
+        #r_vip_rj = np.array(r_vip)/Rj
+        fig, ax = plt.subplots()
+        ax.plot(lats_dip, r_dip, label ='Spin Aligned Dipole', color = 'r')
+        ax.plot(lats_vip, r_vip, label ='VIP4', color = 'k')
+        #asplt.axvline(x = -7.360633237444866, color = 'teal', linestyle = '--', label = 'VIP4 Field Line Intersects Centrifugal Plane')
+        #ax.plot(lats_ali, r_ali, label = 'VIP4 Centrifugal and Spin Equators Aligned', color = 'teal')
+        ax.set(xlabel = 'Latitude (Degrees)', ylabel = 'Distance From Planet ($R_J$)') 
+        #title = 'Alfven Velocity Along field line \n Passing Through at ({:.0f},{:.1f},{:.1f}) in eq plane'.format(start_copy[0]/Rj, start_copy[1]*180/np.pi, 360 - start_copy[2]*180/np.pi))
+        if limits == 'on':
+            ax.set_xlim(-20,20)
+            ax.set_ylim(0,4e3)
+        if logplot == 'on':
+            ax.set_yscale('log')
+
+        plt.legend()
+        plt.show()
+
+    def compare_alfven_at_point(self, point):
+        '''
+        r in rj 
+        theta in colatitude deg 
+        phi in lh deg
+        '''
+        aligned = self.aligned.alfven_at_point(point)
+        dipole = self.dip.alfven_at_point(point)
+        vip4 = self.vip.alfven_at_point(point)
+        print('aligned = {} \n dipole = {},  \n vip4 = {}'.format(aligned, dipole, vip4))
+        print(dipole/vip4)
+
 comparisons = comparisons()
+#comparisons.compare_B_radial_dip_vs_vip(110.8)
+#comparisons.compare_B_radial_dip_vs_vip(200.8)
 #comparisons.compare_va_distance_from_planet([10, np.pi/2, 200.8*np.pi/180], breakpoint = 2)
-#comparisons.compare_va_along_field_latitude([10, np.pi/2, 200.8*np.pi/180], breakpoint = 6)
+#comparisons.compare_va_along_field_latitude([10, np.pi/2, 200.8*np.pi/180], breakpoint = 6, limits='on', min_point=True)
+#comparisons.compare_alfven_at_point([10, 90, 290.8])
+#comparisons.compare_n_along_field_line([10, np.pi/2, 200.8*np.pi/180], logplot='on')
+#comparisons.compare_dist_from_planet_lat([10, np.pi/2, 200.8*np.pi/180])
