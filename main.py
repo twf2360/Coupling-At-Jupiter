@@ -1,4 +1,5 @@
 from cProfile import label
+from scipy.signal import savgol_filter
 import math
 from turtle import color
 from unittest import result
@@ -2923,6 +2924,7 @@ class main:
         LT_segments = ['LT00', 'LT03', 'LT06', 'LT09', 'LT12' , 'LT15', 'LT18', 'LT21']
         lt_r_vel = {}
         for lt in LT_segments:
+            print(lt)
             with open('angular_velocity_data/Pensionerov_et_al/{}.txt'.format(lt), 'r') as f:
                 data = f.read().splitlines()
                 data = np.array([data[i].split() for i in range(len(data))])
@@ -2937,7 +2939,9 @@ class main:
             #print(r_vel)
             rs_vels = np.transpose(r_vel)
             #print(rs_vels)
-            ax.plot(rs_vels[0], rs_vels[1], label = '{}'.format(key))
+            smoothed = savgol_filter(rs_vels[1],71,7)
+            smoother = savgol_filter(smoothed, 71,7)
+            ax.plot(rs_vels[0], smoother, label = '{}'.format(key))
         ax.legend()
         plt.show()
         
