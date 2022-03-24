@@ -1,4 +1,5 @@
 from cProfile import label
+from pyexpat import model
 from scipy.signal import savgol_filter
 import math
 from turtle import color
@@ -6,6 +7,7 @@ from unittest import result
 import numpy as np
 import sys
 import matplotlib.pyplot as plt
+import time
 import json
 from mpl_toolkits.mplot3d import Axes3D
 from matplotlib.patches import Circle, PathPatch
@@ -15,7 +17,7 @@ from matplotlib.lines import Line2D
 import mpl_toolkits.mplot3d.art3d as art3d
 import matplotlib as mpl
 #from sqlalchemy import false
-from mag_field_models import field_models
+from Lorch_mag_field_models import field_models
 import scipy
 import matplotlib.colors as mcolors
 import scipy.special
@@ -23,8 +25,11 @@ from matplotlib import ticker, cm
 from copy import deepcopy
 #from matplotlib.ticker import (MultipleLocator, FormatStrFormatter,
                                #AutoMinorLocator)
-from mag_field_models import field_models
 from labellines import labelLine, labelLines
+from Ray_SimpleAlfvenModel.Grid import Grid as RayGrid
+from Ray_SimpleAlfvenModel.Field import Field as RayField
+from Ray_SimpleAlfvenModel.Planet import Planet as RayPlanet
+import Ray_SimpleAlfvenModel.BFlux as RayBF
 
 plt.rcParams['legend.fontsize'] = 14
 personal_cmap = ['deeppink', 'magenta', 'darkmagenta' ,'darkorchid', 'indigo','midnightblue', 'darkblue', 'slateblue', 'dodgerblue', 'deepskyblue',  'aqua', 'aquamarine' ]
@@ -291,7 +296,7 @@ class main:
         ax.plot(rs,Bs)
         plt.show()
 
-    def trace_magnetic_field(self, printing = 'off', starting_cordinates = None, one_way = 'off', break_point = 3, step = 0.001, pathing = 'forward'):
+    def trace_magnetic_field(self, printing = 'off', starting_cordinates = None, one_way = 'off', break_point = 3, step = 0.001, pathing = 'forward', footprint = False):
         ''' 
         Calculate the magnetic field trace from startpoint (r,theta, phi) with r in ms, theta is colatitude and phi is LH
         INPUT PHI IS LH
@@ -366,6 +371,8 @@ class main:
                     print(' x= {}, y = {}, z =  {}'.format(px,py,pz))
                     print('bunit = {}, change = {}, dr = {} \n \n'.format(Bunit, change, dr))
  
+        if footprint:
+            return points[-1]
         return points, Br_list, B_list, dr_list, r_list
 
 
@@ -2510,7 +2517,7 @@ class main:
          ylabel = 'Difference in Time (Secconds)') #title = 'Difference of Travel time to north Vs South hemisphere \n Dependence on longitude'
         plt.show()
 
-    def db6_better(self, phi_lh_deg, numpoints = 200, mdots = [500,1300,2000], stop = 60, corotation = False, azimuthal = False):
+    def db6_better(self, phi_lh_deg, numpoints = 200, mdots = [500,1300,2000], stop = 60, corotation = False, azimuthal = False, show = True):
         ''' for a given longitude, calculate radial outflow velocity vs local alfven velocity'''
         ''' first, all of the outflow velocities for all of the given mdots '''
         rs = np.linspace(6,stop,numpoints)
@@ -2549,7 +2556,8 @@ class main:
         
 
         ''' and then we plot ''' 
-        fig, ax = plt.subplots()
+        if show: 
+            fig, ax = plt.subplots()
         if azimuthal:
             azimuthals = []
             ang_vel = np.load('angular_velocity_data/mdot_2000.0.npy', allow_pickle=True)
@@ -2559,31 +2567,34 @@ class main:
                 omega = ang_vel[i]
                 azimuthals.append(r*Rj*omega*omega_J)
             azimuthals_km = np.array(azimuthals)/1e3
-            ax.plot(ang_vel_rs, azimuthals_km, label = 'Azimuthal Velocity (Dipole Approx. {} = 2000kg/s)'.format(u'\u1E41'))
-
-        for key in mdot_outflows:
-            v_kms = np.array(mdot_outflows[key]) /1000
-            ax.plot(rs, v_kms, label = 'Radial Velocity ({} = {}Kg/s)'.format(u'\u1E41' ,key))
-        vas_km = np.array(vas)/1000
-        ax.plot(rs, vas_km, label = 'Local Alfven Velocity')
-        if corotation:
-            corotations_km = np.array(corotations)/1e3
-            ax.plot(rs, corotations_km, label = 'Corotation Speed', color = 'm')
+            if show:
+                ax.plot(ang_vel_rs, azimuthals_km, label = 'Azimuthal Velocity (Dipole Approx. {} = 2000kg/s)'.format(u'\u1E41'))
+        if show:
+            for key in mdot_outflows:
+                v_kms = np.array(mdot_outflows[key]) /1000
+                ax.plot(rs, v_kms, label = 'Radial Velocity ({} = {}Kg/s)'.format(u'\u1E41' ,key))
+            vas_km = np.array(vas)/1000
+            ax.plot(rs, vas_km, label = 'Local Alfven Velocity')
+            if corotation:
+                corotations_km = np.array(corotations)/1e3
+                ax.plot(rs, corotations_km, label = 'Corotation Speed', color = 'm')
         #ax.grid()
-        ax.legend()
-        ax.yaxis.set_ticks_position('both')
-        plt.yscale("log")
-        ax.set_ylim(1,1000)
-        ax.set_xlim(0,100)
-        #ax.set(title = 'Radial Outflow Along Centrifugal Equator And Local Alfven Velocity \n For $\u03BB_{{III}} $ Longitude of {:.1f}{} '.format(phi_lh_deg, u"\N{DEGREE SIGN}"),
-        ax.set(xlabel = 'R ($R_J$)',ylabel = 'Velocity ($kms^{-1}$)')
-        ###plt.savefig('images-24-jan-update/radial_flow_plot_better.png')
-        plt.show()
+            ax.legend()
+            ax.yaxis.set_ticks_position('both')
+            plt.yscale("log")
+            ax.set_ylim(1,1000)
+            ax.set_xlim(0,100)
+            #ax.set(title = 'Radial Outflow Along Centrifugal Equator And Local Alfven Velocity \n For $\u03BB_{{III}} $ Longitude of {:.1f}{} '.format(phi_lh_deg, u"\N{DEGREE SIGN}"),
+            ax.set(xlabel = 'R ($R_J$)',ylabel = 'Velocity ($kms^{-1}$)')
+            ###plt.savefig('images-24-jan-update/radial_flow_plot_better.png'):
+            plt.show()
+        if azimuthal:
+            return mdot_outflows, vas, rs, azimuthals, ang_vel_rs
         return mdot_outflows, vas, rs
     
-    def find_va_vo_cross_point(self, mdots, phi_lh_deg):
+    def find_va_vo_cross_point(self, mdots, phi_lh_deg, numpoints = 200):
         mdot_crossing = {}
-        mdot_outflows, vas, rs= self.db6_better(phi_lh_deg=phi_lh_deg, mdots=mdots, stop = 80)
+        mdot_outflows, vas, rs= self.db6_better(phi_lh_deg=phi_lh_deg, mdots=mdots, stop = 80, show = False, numpoints=numpoints)
         for key in mdot_outflows:
             outflows = mdot_outflows[key]
             for i in range(len(outflows)):
@@ -2592,6 +2603,64 @@ class main:
                     break
         return mdot_crossing
 
+    def find_va_vphi_cross_point_lray(self, phi_lh_deg):
+        results = self.db6_better(phi_lh_deg=phi_lh_deg, mdots=[2000], stop = 80, azimuthal=True, show= False)
+        vas = results[1]
+        vas_rs = results[2]
+        azis = results[3]
+        azis_rs = results[4]
+        for i in range(len(vas)):
+            va = vas[i]
+            r = vas_rs[i]
+            try:
+                index_point = list(azis_rs).index(r)
+                azi = azis[index_point]
+            except ValueError:
+                #print('rs dont match up and i am sad about it')
+                finding_index = [np.abs(x-r) for x in azis_rs]
+                closest_r_index = np.array(finding_index).argmin()
+                azi = azis[closest_r_index]
+            
+            if azi > va:
+                return r
+            
+
+    def find_va_vphi_cross_point_pensionerov(self, phi_lh_deg):
+        results = self.db6_better(phi_lh_deg=phi_lh_deg, mdots=[2000], stop = 80, azimuthal=True, show= False)
+        vas = results[1]
+        vas_rs = results[2]
+        lt = self.what_LT_segment(phi_lh_deg=phi_lh_deg)
+        with open('angular_velocity_data/Pensionerov_et_al/{}.txt'.format(lt), 'r') as f:
+            data = f.read().splitlines()
+        data = np.array([data[i].split() for i in range(len(data))])
+        data = data.flatten()
+        data = [data[i].replace(',', '') for i in range(len(data))]
+        data = [float(data[i]) for i in range(len(data))]
+        r_ang_vel = [data[i:i+2] for i in range(0, len(data), 2)]
+        rs_vels = np.transpose(r_ang_vel)
+
+        azis = []
+        azis_rs = []
+        for i in range(len(rs_vels[0])):
+            r = rs_vels[0][i]
+            omega = rs_vels[1][i]
+            azis.append(r*Rj*omega*omega_J)
+            #print(r, omega, omega_J, r*Rj*omega*omega_J )
+            azis_rs.append(r)
+        for i in range(len(vas)):
+            va = vas[i]
+            r = vas_rs[i]
+            try:
+                index_point = list(azis_rs).index(r)
+                azi = azis[index_point]
+            except ValueError:
+                #print('rs dont match up and i am sad about it')
+                finding_index = [np.abs(x-r) for x in azis_rs]
+                closest_r_index = np.array(finding_index).argmin()
+                azi = azis[closest_r_index]
+            
+            if azi > va:
+                return r
 
 
     def outflow_vs_alfven_cent_plane(self, mdot, gridsize = 60):
@@ -2920,7 +2989,7 @@ class main:
         return va_corrected
 
 
-    def pensionerov_ang_vel_recreate(self):
+    def pensionerov_ang_vel_recreate(self, azimuthal = False):
         LT_segments = ['LT00', 'LT03', 'LT06', 'LT09', 'LT12' , 'LT15', 'LT18', 'LT21']
         lt_r_vel = {}
         for lt in LT_segments:
@@ -2934,6 +3003,8 @@ class main:
                 r_ang_vel = [data[i:i+2] for i in range(0, len(data), 2)]
                 lt_r_vel[lt] = r_ang_vel
         fig, ax = plt.subplots()
+        colours = ['b','g','r','c','m','k','y']
+        color_index = 0
         for key in lt_r_vel:
             r_vel = lt_r_vel[key]
             #print(r_vel)
@@ -2941,13 +3012,26 @@ class main:
             #print(rs_vels)
             smoothed = savgol_filter(rs_vels[1],71,7)
             smoother = savgol_filter(smoothed, 71,7)
-            ax.plot(rs_vels[0], smoother, label = '{}'.format(key))
+            ax.plot(rs_vels[0], rs_vels[1], label = '{}'.format(key), color = colours[color_index])
+            color_index+=1 
+        if azimuthal:
+            azimuthals = []
+            ang_vel = np.load('angular_velocity_data/mdot_2000.0.npy', allow_pickle=True)
+            ang_vel_rs = np.load('angular_velocity_data/radii2000.0.npy',  allow_pickle=True)
+            for i in range(len(ang_vel_rs)):
+                r = ang_vel_rs[i]
+                omega = ang_vel[i]
+                azimuthals.append(r*Rj*omega*omega_J)
+            #azimuthals_km = np.array(azimuthals)/1e3
+            ax.plot(ang_vel_rs, ang_vel, label = 'Ray Model')
+        ax.axvline(x = 18, label= 'approximate crossover for azimuthal and alfven', color = 'firebrick', linestyle = '--')
         ax.legend()
+        ax.set(xlabel = 'Angular Velocity ($\u03A9_J$)', ylabel = 'r ($R_J$)')
         plt.show()
         
-    def what_LT_segment(self, phi_lh_deg):
-        LT = None
-        if 0<phi_lh_deg<=45:
+    def what_LT_segment(self, phi_lh_deg= 0):
+        LT = 0
+        if 0<=phi_lh_deg<=45:
             LT = 'LT21'
         if 45<phi_lh_deg<=90:
             LT = 'LT18'
@@ -2961,92 +3045,309 @@ class main:
             LT = 'LT06'
         if 270<phi_lh_deg<=315:
             LT = 'LT03'        
-        if 315<phi_lh_deg<=60:
+        if 315<phi_lh_deg<=360:
             LT = 'LT00'
         return LT
 
-    def what_fastest_contour(self, gridsize = 40):
-        azimuthals = []
-        r_azi = {}
-        ang_vel = np.load('angular_velocity_data/mdot_2000.0.npy', allow_pickle=True)
-        ang_vel_rs = np.load('angular_velocity_data/radii2000.0.npy',  allow_pickle=True)
-        for i in range(len(ang_vel_rs)):
-            r = ang_vel_rs[i]
-            omega = ang_vel[i]
-            r_azi[r] = r*Rj*omega*omega_J
-    
-            azimuthals.append(r*Rj*omega*omega_J)
-        azimuthals_km = np.array(azimuthals)/1e3
-        #gridx, gridy = self.makegrid_2d_negatives()'
-        #print(r_azi.keys())
+    def find_cross_points_lray(self, numpoints = 10):
+        phis = np.linspace(0, 360, num = numpoints)
+        phi_outflow_azi = {}
+        for phi in phis:
+            print('new phi, phi = {}'.format(phi))
+            outflow_crossing = self.find_va_vo_cross_point([2000], phi_lh_deg=phi, numpoints=800)
+            outflow_crossing_r = outflow_crossing[2000]
+            azi_crossing_r = self.find_va_vphi_cross_point_lray(phi_lh_deg=phi)
+            phi_outflow_azi[phi] = [outflow_crossing_r, azi_crossing_r]
+        with open('crossing_data.json', 'w') as fp:
+            json.dump(phi_outflow_azi, fp, indent=4)
 
-        gridx, gridy = self.makegrid_2d_negatives(200 ,gridsize= gridsize)
-        fastest_grid = []
-        for i in range(len(gridy)):
-            fastest_row = []
-            print('new row, {} to go'.format(len(gridx)-i))
+    def find_cross_points_pensionerov(self, numpoints = 10):
+        phis = np.linspace(0, 360, num = numpoints)
+        phi_outflow_azi = {}
+        for phi in phis:
+            print('new phi, phi = {}'.format(phi))
+            outflow_crossing = self.find_va_vo_cross_point([2000], phi_lh_deg=phi, numpoints=800)
+            outflow_crossing_r = outflow_crossing[2000]
+            azi_crossing_r = self.find_va_vphi_cross_point_pensionerov(phi_lh_deg=phi)
+            phi_outflow_azi[phi] = [outflow_crossing_r, azi_crossing_r]
+        with open('crossing_data_pensionerov.json', 'w') as fp:
+            json.dump(phi_outflow_azi, fp, indent=4)
 
-            for j in range(len(gridx)):
+    def analyse_cross_points(self, model = 'ray', winners = False, closest_to_planet = False, outflow_cross_plot = False, furthest_azi_cross = False, footprint = False, 
+    show = False, phi_cross_plot = False, outflow_footprint = False, footprint_direction = 'south'):
+        if model == 'ray':
+            with open('crossing_data.json') as json_file:
+                data = json.load(json_file)
+        if model == 'pensionerov':
+            with open('crossing_data_pensionerov.json') as json_file:
+                data = json.load(json_file)
+        if model == 'test':
+            with open('test.json') as json_file:
+                data = json.load(json_file)
+        phis = list(data.keys())
+        if winners:
+            outflow_winners = 0
+            azi_winners = 0
+            for phi in phis:
+                outflow_cross = data[phi][0]
+                azi_cross = data[phi][1]
+                if outflow_cross < azi_cross:
+                    outflow_winners +=1 
+                else:
+                    azi_winners+=1 
+            print('Outflow Wins: {} \nAzimuthal Wins: {}'.format(outflow_winners, azi_winners))
+        if closest_to_planet:
+            closest_azi = 30
+            closest_outflow = 30
+            for phi in phis:
+                outflow_cross = data[phi][0]
+                azi_cross = data[phi][1]
+                if outflow_cross < closest_outflow:
+                    closest_outflow = outflow_cross
+                    closest_outflow_phi = phi
+                if azi_cross < closest_azi:
+                    closest_azi = azi_cross
+                    closest_azi_phi = phi
+            print('Closest Outflow Cross = {} at phi = {} \nClosest Azi Cross = {} at phi = {}'.format(closest_outflow, closest_outflow_phi, closest_azi, closest_azi_phi))
+        if outflow_cross_plot:
+            crosses = []
+            phis_floats = [float(x) for x in phis]
+            for phi in phis:
+                outflow_cross = data[phi][0]
+                crosses.append(outflow_cross)
+            fig, ax = plt.subplots()
+            ax.plot(phis_floats, crosses, label = 'Radial Distance Where $v_o > v_a$', color = 'k')
+            ax.axhline(y =37.608040201005025, label = 'Radial Distance Where $v_o > v_a$ for Spin Aligned Dipole', color = 'r', linestyle = '--')
+            ax.legend()
+            ax.set_ylim(20,50)
+            ax.set_xlabel('$\u03BB_{{III}} (Degrees)$')
+            ax.set_ylabel('R ($R_J)$')
+            plt.show()
+        
+        if furthest_azi_cross:
+            furthest_azi = 10
+            furthest_outflow = 10
+            for phi in phis:
+                azi_cross = data[phi][1]
+                outflow_cross = data[phi][0]
+                if outflow_cross > furthest_outflow:
+                    furthest_outflow = outflow_cross
+                    furthest_outflow_phi = phi
+                if azi_cross > furthest_azi:
+                    furthest_azi = azi_cross
+                    furthest_azi_phi = phi
+            print('Furthest azi Cross = {} at phi = {}'.format(furthest_azi, furthest_azi_phi))
+            print('Furthest out Cross = {} at phi = {}'.format(furthest_outflow, furthest_outflow_phi))
+        if footprint:
+            footprints = []
+            footprints_xy = []
+            for phi_lh_deg in phis:
+                print(phi_lh_deg)
                 
-                x = gridx[i][j]
-                y = gridy[i][j]
-                r = np.sqrt(x**2 + y**2)
-                phi_rh_rad = np.arctan2(y,x) 
-                phi_lh_rad = 2*np.pi - phi_rh_rad
-                phi_lh_deg = phi_lh_rad * np.pi/180
+                #outflow_cross = data[phi][0]
+                azi_cross = data[phi_lh_deg][1]
+                r = azi_cross
+                phi_lh_deg = float(phi_lh_deg)
+                phi_lh_rad = phi_lh_deg * np.pi/180
+                phi_rh_rad = 2*np.pi - phi_lh_rad
                 if self.aligned == 'yes':
                    colatitude = np.pi/2
-                   colat_deg = 90
                 if self.aligned == 'no': 
-                    cent_eq_latitude = self.centrifugal_equator(r, phi)
+                    cent_eq_latitude = self.centrifugal_equator(r, phi_rh_rad)
                     colatitude = np.pi/2 - cent_eq_latitude
-                    colat_deg = colatitude * np.pi/180
-                va = self.alfven_at_point([r, colat_deg, phi_lh_deg])
-                flow_vel = self.flow_velocity(r, mdot = 2000)
-                azi = r_azi[r]
-                if va> azi and va >  flow_vel:
-                    fastest_val = 0
-                if flow_vel > azi and flow_vel > va:
-                    fastest_val = -1
-                if azi > flow_vel and azi >va:
-                    fastest_val = 1
-                fastest_row.append(fastest_val)
-            fastest_grid.append(fastest_row)
-        fig, ax = plt.subplots()
-        cont = ax.contourf(gridx, gridy, fastest_grid,cmap = 'seismic')
-        ax.add_patch(Circle((0,0), 1, color='y', zorder=100, label = "Jupiter"))
-        ax.add_patch(Circle((0,0), 6.2, color='c', zorder=90, label = "Io Orbital Radius"))
-        cbar = fig.colorbar(cont, label = 'label', ticks = [-1, 0 , 1])
-        cbar.set_yticklabels = ['Outflow', 'ALfven Velocity', 'Azimuthal']
-        plt.show()
+                if footprint_direction == 'north':
+                    footprint_point = self.trace_magnetic_field(starting_cordinates=[r*Rj, colatitude, phi_lh_rad], footprint=True, break_point=1.0, step = 0.001, pathing='backward')
+                else:
+                    footprint_point = self.trace_magnetic_field(starting_cordinates=[r*Rj, colatitude, phi_lh_rad], footprint=True, break_point=1.0, step = 0.001)
+                footprints.append(footprint_point)
+                footprints_xy.append([footprint_point[0],footprint_point[1]])
+
+            footprints_plottable = np.transpose(footprints_xy)
+            footprints_plottable_rj = footprints_plottable/Rj
+            fig, ax = plt.subplots()
+            ax.scatter(footprints_plottable_rj[0], footprints_plottable_rj[1], label = 'Footprint of Plasma Decoupling')
+            #ax.add_patch(Circle((0,0), 1, color='firebrick', zorder=100, label = "Jupiter Radii", fill = False))
+            ax.legend()
+            if show:
+                plt.show()
+            return footprints_plottable_rj
+        if phi_cross_plot:
+            phis = list(data.keys())
+            phis_floats = [float(x) for x in phis]
+            azi_crosses = []
+            for phi in phis:
+                azi_cross = data[phi][1]
+                azi_crosses.append(azi_cross)
+            if show:
+                fig, ax = plt.subplots()
+                ax.plot(phis_floats, azi_crosses)
+                plt.show()
+            return phis_floats, azi_crosses
+        if outflow_footprint:
+            footprints = []
+            footprints_xy = []
+            for phi_lh_deg in phis:
+                print(phi_lh_deg)
+                
+                #outflow_cross = data[phi][0]
+                outflow_cross = data[phi_lh_deg][0]
+                r = outflow_cross
+                phi_lh_deg = float(phi_lh_deg)
+                phi_lh_rad = phi_lh_deg * np.pi/180
+                phi_rh_rad = 2*np.pi - phi_lh_rad
+                if self.aligned == 'yes':
+                    colatitude = np.pi/2
+                if self.aligned == 'no': 
+                    cent_eq_latitude = self.centrifugal_equator(r, phi_rh_rad)
+                    colatitude = np.pi/2 - cent_eq_latitude
+                footprint_point = self.trace_magnetic_field(starting_cordinates=[r*Rj, colatitude, phi_lh_rad], footprint=True, break_point=1.0, step = 0.001)
+                footprints.append(footprint_point)
+                footprints_xy.append([footprint_point[0],footprint_point[1]])
+
+            footprints_plottable = np.transpose(footprints_xy)
+            footprints_plottable_rj = footprints_plottable/Rj
+            fig, ax = plt.subplots()
+            ax.plot(footprints_plottable_rj[0], footprints_plottable_rj[1], label = 'Footprint of Radial Outflow Decoupling')
+            #ax.add_patch(Circle((0,0), 1, color='firebrick', zorder=100, label = "Jupiter Radii", fill = False))
+            ax.legend()
+            ax.set_aspect(aspect = 'equal')
+            np.save('outflow_footprints.npy', footprints_plottable_rj, allow_pickle=True)
+            if show:
+                plt.show()
+            return footprints_plottable_rj
+    
+    
+    def db6_no_outflow(self, phi_lh_deg, numpoints = 200, stop = 60, corotation = False, ray = False, show = True, pensionerov = False):
+        ''' for a given longitude, calculate radial outflow velocity vs local alfven velocity'''
+        ''' first, all of the outflow velocities for all of the given mdots '''
+        rs = np.linspace(6,stop,numpoints)
+        #mdots = [500,1300,2000]
+
+        ''' next, we need to calc alfven velocity, at each of the r values, along centrifigul equator, for given phi '''
+        vas = []
+        phi_rh_rad = (360 -phi_lh_deg) *np.pi/180
+        phi_lh_rad = phi_lh_deg * np.pi/180
+        corotations = []
+        for r in rs:
+            
+            if self.aligned == 'no':
+                cent_eq_latitude = self.centrifugal_equator(r, phi_rh_rad)
+                colatitude = np.pi/2 - cent_eq_latitude
+            else:
+                colatitude = np.pi/2
+            n = self.density_combined(r, colatitude, phi_lh_rad)
+            B_overall = self.mag_field_at_point(r, colatitude, phi_rh_rad)
+            B_x, B_y, B_z = self.Bsph_to_Bcart(B_overall[0], B_overall[1], B_overall[2], r, colatitude, phi_rh_rad)
+            B = np.array([B_x, B_y, B_z])
+            B =  B/(10**9)  #chris's code is in nT
+            va = self.calculator(B, n)
+            vas.append(va)
+            if corotation:
+                corotations.append((2*np.pi/(9.93*3600))* r * Rj)
+
         
 
+        ''' and then we plot ''' 
+        fig, ax = plt.subplots()
+        if ray:
+            azimuthals = []
+            ang_vel = np.load('angular_velocity_data/mdot_2000.0.npy', allow_pickle=True)
+            ang_vel_rs = np.load('angular_velocity_data/radii2000.0.npy',  allow_pickle=True)
+            for i in range(len(ang_vel_rs)):
+                r = ang_vel_rs[i]
+                omega = ang_vel[i]
+                azimuthals.append(r*Rj*omega*omega_J)
+            azimuthals_km = np.array(azimuthals)/1e3
+            ax.plot(ang_vel_rs, azimuthals_km, label = 'Azimuthal Velocity (Ray Model)')
 
-system = main('dipole', 'no')
-#system.travel_time(startpoint=[15,np.pi/2, 20.8*np.pi/180])
-#system.difference_in_tt_multi(r = 15, num = 100)
-#system.plot_angle_vs_time(r= 15, num = 100)
-#system.pensionerov_ang_vel_recreate()
-system.what_fastest_contour()
+        vas_km = np.array(vas)/1000
+        ax.plot(rs, vas_km, label = 'Local Alfven Velocity')
+        if corotation:
+            corotations_km = np.array(corotations)/1e3
+            ax.plot(rs, corotations_km, label = 'Corotation Velocity', color = 'm')
+        #ax.grid()
+        if pensionerov:
+            lt = self.what_LT_segment(phi_lh_deg=phi_lh_deg)
+            with open('angular_velocity_data/Pensionerov_et_al/{}.txt'.format(lt), 'r') as f:
+                data = f.read().splitlines()
+            data = np.array([data[i].split() for i in range(len(data))])
+            data = data.flatten()
+            data = [data[i].replace(',', '') for i in range(len(data))]
+            data = [float(data[i]) for i in range(len(data))]
+            r_ang_vel = [data[i:i+2] for i in range(0, len(data), 2)]
+            rs_vels = np.transpose(r_ang_vel)
 
-#system.travel_time(startpoint=[59, np.pi/2, 200.8*np.pi/180], direction='backward', break_point=1.5)
-#print(system.lat_where_va_correction_matters(r = 8, phi_lh_deg = 200.8, rtol = 0.05))
-#print(system.find_furthest_r_single_input([8*Rj, np.pi/2 - 61.0*np.pi/180, 200.8*np.pi/2]))
-#system.outflow_vs_alfven_cent_plane(mdot = 1300)
-#system.va_along_field_line(uncorrected = 'off')
-#system.rel_correction_latitude_contour(rtol=0.05)
-#system.plotTrace([15*Rj, np.pi/2, np.pi])
-#system.db6_better(200.8, mdots = [2000], stop = 85, corotation = True, azimuthal= True)
-#system.density_topdown_contour(gridsize = 60)
-#system.phippsbagfig_recreate()
-#system.equator_comparison_mag_cent( phi = 200.9, num = 1000)
-#system.plotting_density( density = 'off',scale_height = 'on')
-#system.density_contour_meridian(200.8, field_line = 'off')
-#print(system.find_cross_point(phi_lh_deg = 110.8, mdots = [280,500,1300,2000]))
-#system.multiple_travel_times()
-#system.alfven_meridian_slice(200.8, field_line='off', within_6='off')
-#system.bn_along_field_line(limits=False, clipped = True, show = False)
-#system.alfven_topdown_equatorial_plane(gridsize=60)
+            azis = []
+            azis_rs = []
+            for i in range(len(rs_vels[0])):
+                r = rs_vels[0][i]
+                omega = rs_vels[1][i]
+                azis.append(r*Rj*omega*omega_J)
+                #print(r, omega, omega_J, r*Rj*omega*omega_J )
+                azis_rs.append(r)
+            azis_km = np.array(azis)/1e3
+            ax.plot(azis_rs, azis_km, label = 'Azimuthal Velocity (Pensionerov Model {})'.format(lt))
+        ax.legend()
+        ax.yaxis.set_ticks_position('both')
+        plt.yscale("log")
+        #ax.set_ylim(1,1000)
+        #ax.set_xlim(0,100)
+        #ax.set(title = 'Radial Outflow Along Centrifugal Equator And Local Alfven Velocity \n For $\u03BB_{{III}} $ Longitude of {:.1f}{} '.format(phi_lh_deg, u"\N{DEGREE SIGN}"),
+        ax.set(xlabel = 'R ($R_J$)',ylabel = 'Velocity ($kms^{-1}$)')
+        ###plt.savefig('images-24-jan-update/radial_flow_plot_better.png')
+        if show:
+            plt.show()
+
+    def is_mdot_enough(self, mdot, model = 'ray'):
+        if model == 'ray':
+            with open('crossing_data.json') as json_file:
+                data = json.load(json_file)
+        if model == 'pensionerov':
+            with open('crossing_data_pensionerov.json') as json_file:
+                data = json.load(json_file)
+        #phis = np.linspace(0, 360, num = 360)
+        phis = list(data.keys())
+        success = False
+        for phi in phis:
+            print(phi)
+            outflow_crossing = self.find_va_vo_cross_point([mdot], phi_lh_deg=float(phi), numpoints=200)
+            outflow_crossing_r = outflow_crossing[mdot]
+            azi_cross = data[phi][1]
+            if outflow_crossing_r < azi_cross:
+                success = True
+                sphi = phi
+                break
+
+            
+        if success:
+            print('Success!!!! mdot = {} phi = {}'.format(mdot, sphi))
+
+    def plot_va_vo_cross_points(self,numpoints = 360):
+        phis = np.linspace(0, 360, num = numpoints)
+        crossings = []
+        for phi in phis:
+            print('phi = ', phi)
+            outflow_crossing = self.find_va_vo_cross_point([2000], phi_lh_deg=phi, numpoints=800)
+            outflow_crossing_r = outflow_crossing[2000]
+            crossings.append(outflow_crossing_r)
+        fig, ax = plt.subplots()
+        ax.plot(phis, crossings, label = 'Radial Distance Where $v_o >= v_a$', color = 'k') 
+        ax.axhline(y =37.608040201005025, label = 'Radial Distance Where $v_o >= v_a$ for Spin Aligned Dipole', color = 'r', linestyle = '--')
+        ax.legend()
+        ax.set_ylim(20,50)
+        ax.set_xlabel('$\u03BB_{{III}} (Degrees)$')
+        ax.set_ylabel('R ($R_J$')
+        plt.show()
+start_time = time.time()
+system = main('VIP4', 'no')
+#print(system.find_va_vo_cross_point(mdots=[2000], phi_lh_deg= 100 ))
+#system.analyse_cross_points(model = 'pensionerov', outflow_footprint=True, show=True)
+#system.find_cross_points_lray(360)
+#system.find_cross_points_pensionerov(360)
+#ystem.plot_va_vo_cross_points()
+
+
+
 class comparisons:
     def __init__(self):
         self.dip = main('dipole', 'yes')
@@ -3137,8 +3438,8 @@ class comparisons:
         ax.set(xlabel = 'Latitude (Degrees)', ylabel = 'Alfven Velocity (kms$^{-1}$)') 
         #title = 'Alfven Velocity Along field line \n Passing Through at ({:.0f},{:.1f},{:.1f}) in eq plane'.format(start_copy[0]/Rj, start_copy[1]*180/np.pi, 360 - start_copy[2]*180/np.pi))
         if limits == 'on':
-            ax.set_xlim(-20,20)
-            ax.set_ylim(0,4e3)
+            ax.set_xlim(-10,10)
+            ax.set_ylim(100,2000)
         if logplot == 'on':
             ax.set_yscale('log')
 
@@ -3174,7 +3475,7 @@ class comparisons:
         #title = 'Alfven Velocity Along field line \n Passing Through at ({:.0f},{:.1f},{:.1f}) in eq plane'.format(start_copy[0]/Rj, start_copy[1]*180/np.pi, 360 - start_copy[2]*180/np.pi))
         if limits == 'on':
             ax.set_xlim(-20,20)
-            ax.set_ylim(0,4e3)
+            #ax.set_ylim(0,2000)
         if logplot == 'on':
             ax.set_yscale('log')
 
@@ -3240,11 +3541,80 @@ class comparisons:
         print('aligned = {} \n dipole = {},  \n vip4 = {}'.format(aligned, dipole, vip4))
         print(dipole/vip4)
 
+    def compare_models_footprints_calc(self, direction = 'south'):
+        if direction == 'north':
+            ray = self.vip.analyse_cross_points(model = 'ray', footprint=True, footprint_direction='north')
+            pensionerov = self.vip.analyse_cross_points(model= 'pensionerov', footprint=True, footprint_direction='north')
+            fig, ax = plt.subplots()
+            ax.plot(ray[0], ray[1], label = 'Ray Model', color = 'k')
+            ax.plot(pensionerov[0], pensionerov[1], label = 'Pensionerov Model', color = 'r')
+            ax.add_patch(Circle((0,0), 1, color='y', zorder=100, label = "Jupiter", fill = False))
+            ax.set(xlabel = 'x $(R_J)$', ylabel = 'y $(R_J)$')
+            np.save('pensionerov_footprint_north.npy', pensionerov, allow_pickle=True)
+            np.save('ray_footprint_north.npy', ray, allow_pickle= True)
+        else:
+            ray = self.vip.analyse_cross_points(model = 'ray', footprint=True)
+            pensionerov = self.vip.analyse_cross_points(model= 'pensionerov', footprint=True)
+            fig, ax = plt.subplots()
+            np.save('pensionerov_footprint.npy', pensionerov, allow_pickle=True)
+            np.save('ray_footprint.npy', ray, allow_pickle= True)
+            ax.plot(ray[0], ray[1], label = 'Ray Model', color = 'k')
+            ax.plot(pensionerov[0], pensionerov[1], label = 'Pensionerov Model', color = 'r')
+            ax.add_patch(Circle((0,0), 1, color='y', zorder=100, label = "Jupiter", fill = False))
+            ax.set(xlabel = 'x $(R_J)$', ylabel = 'y $(R_J)$')
+            np.save('pensionerov_footprint.npy', pensionerov, allow_pickle=True)
+            np.save('ray_footprint.npy', ray, allow_pickle= True)
+        plt.show()
+
+
+    
+    def compare_models_crosses(self):
+        ray = self.vip.analyse_cross_points(model = 'ray', phi_cross_plot=True)
+        pensionerov = self.vip.analyse_cross_points(model= 'pensionerov', phi_cross_plot=True)
+        fig, ax = plt.subplots()
+        ax.plot(ray[0], ray[1], label = 'Ray Model', color = 'k')
+        ax.plot(pensionerov[0], pensionerov[1], label = 'Pensionerov Model', color = 'r')
+        ax.legend()
+        ax.set(xlabel = 'Distance Where $v_{\u03A6} > v_A$ ($R_J)$', ylabel = '$\u03BB_{{III}} (Degrees)$')
+        plt.show()
+
+    def compare_models_footprints_pre_calculated(self):
+        ray = np.load('ray_footprint_north.npy', allow_pickle=True)
+        pensionerov = np.load('pensionerov_footprint_north.npy', allow_pickle=True)
+        fig, ax = plt.subplots()
+        ax.plot(ray[0], ray[1], label = 'Ray Model', color = 'k')
+        ax.plot(pensionerov[0], pensionerov[1], label = 'Pensionerov Model', color = 'r')
+        ax.add_patch(Circle((0,0), 1, color='y', zorder=100, label = "Jupiter", fill = False))
+        ax.set(xlabel = 'x $(R_J)$', ylabel = 'y $(R_J)$')
+        ax.legend()
+        ax.set_aspect(aspect='equal')
+        plt.show()
+    
+    def compare_all_decoupling_pre_calculated(self):
+        ray = np.load('ray_footprint_north.npy', allow_pickle=True)
+        pensionerov = np.load('pensionerov_footprint_north.npy', allow_pickle=True)
+        outflow = np.load('outflow_footprints.npy', allow_pickle=True)
+        fig, ax = plt.subplots()
+        ax.plot(ray[0], ray[1], label = 'Ray Model', color = 'k')
+        ax.plot(pensionerov[0], pensionerov[1], label = 'Pensionerov Model', color = 'r')
+        ax.plot(outflow[0], outflow[1], label = 'Radial Outflow Decoupling', color = 'c')
+        ax.add_patch(Circle((0,0), 1, color='y', zorder=100, label = "Jupiter", fill = False))
+        ax.set(xlabel = 'x $(R_J)$', ylabel = 'y $(R_J)$')
+        ax.legend()
+        ax.set_aspect(aspect='equal')
+        plt.show()
 comparisons = comparisons()
+#comparisons.compare_all_decoupling_pre_calculated()
+comparisons.compare_models_footprints_pre_calculated()
+#comparisons.compare_n_along_field_line(logplot='on', startpoint=[10, np.pi/2, 290.8 *np.pi/180])
+#comparisons.compare_models_crosses()
+#omparisons.compare_models_footprints_calc(direction='north')
 #comparisons.compare_B_radial_dip_vs_vip(110.8)
 #comparisons.compare_B_radial_dip_vs_vip(200.8)
 #comparisons.compare_va_distance_from_planet([10, np.pi/2, 200.8*np.pi/180], breakpoint = 2)
-#comparisons.compare_va_along_field_latitude([10, np.pi/2, 200.8*np.pi/180], breakpoint = 6, limits='on', min_point=True)
+#comparisons.compare_va_along_field_latitude([10, np.pi/2, 290.8*np.pi/180], breakpoint = 6, limits='on', min_point=True, logplot='on')
 #comparisons.compare_alfven_at_point([10, 90, 290.8])
 #comparisons.compare_n_along_field_line([10, np.pi/2, 200.8*np.pi/180], logplot='on')
-#comparisons.compare_dist_from_planet_lat([10, np.pi/2, 200.8*np.pi/180])
+#comparisons.compare_dist_from_planet_lat([10, np.pi/2, 200.8*np.pi/1)
+
+print('time taken = {}s'.format(time.time()-start_time))
