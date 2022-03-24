@@ -3003,7 +3003,7 @@ class main:
                 r_ang_vel = [data[i:i+2] for i in range(0, len(data), 2)]
                 lt_r_vel[lt] = r_ang_vel
         fig, ax = plt.subplots()
-        colours = ['b','g','r','c','m','k','y']
+        colours = ['b','g','r','c','m','k','y', 'lime']
         color_index = 0
         for key in lt_r_vel:
             r_vel = lt_r_vel[key]
@@ -3012,8 +3012,9 @@ class main:
             #print(rs_vels)
             smoothed = savgol_filter(rs_vels[1],71,7)
             smoother = savgol_filter(smoothed, 71,7)
-            ax.plot(rs_vels[0], rs_vels[1], label = '{}'.format(key), color = colours[color_index])
+            ax.plot(rs_vels[0], smoother, label = '{}'.format(key), color = colours[color_index])
             color_index+=1 
+        ax.set_xlim(0,70)
         if azimuthal:
             azimuthals = []
             ang_vel = np.load('angular_velocity_data/mdot_2000.0.npy', allow_pickle=True)
@@ -3023,10 +3024,10 @@ class main:
                 omega = ang_vel[i]
                 azimuthals.append(r*Rj*omega*omega_J)
             #azimuthals_km = np.array(azimuthals)/1e3
-            ax.plot(ang_vel_rs, ang_vel, label = 'Ray Model')
-        ax.axvline(x = 18, label= 'approximate crossover for azimuthal and alfven', color = 'firebrick', linestyle = '--')
+            ax.plot(ang_vel_rs, ang_vel, label = 'Ray Model', color = "peru")
+        #ax.axvline(x = 18, label= 'Approximate Decoupling Radius', color = 'firebrick', linestyle = '--')
         ax.legend()
-        ax.set(xlabel = 'Angular Velocity ($\u03A9_J$)', ylabel = 'r ($R_J$)')
+        ax.set(ylabel = 'Angular Velocity ($\u03A9_J$)', xlabel = 'r ($R_J$)')
         plt.show()
         
     def what_LT_segment(self, phi_lh_deg= 0):
@@ -3345,6 +3346,7 @@ system = main('VIP4', 'no')
 #system.find_cross_points_lray(360)
 #system.find_cross_points_pensionerov(360)
 #ystem.plot_va_vo_cross_points()
+#system.pensionerov_ang_vel_recreate(azimuthal=True)
 
 
 
@@ -3542,7 +3544,7 @@ class comparisons:
         print(dipole/vip4)
 
     def compare_models_footprints_calc(self, direction = 'south'):
-        if direction == 'north':
+        if direction == 'south':
             ray = self.vip.analyse_cross_points(model = 'ray', footprint=True, footprint_direction='north')
             pensionerov = self.vip.analyse_cross_points(model= 'pensionerov', footprint=True, footprint_direction='north')
             fig, ax = plt.subplots()
@@ -3550,8 +3552,8 @@ class comparisons:
             ax.plot(pensionerov[0], pensionerov[1], label = 'Pensionerov Model', color = 'r')
             ax.add_patch(Circle((0,0), 1, color='y', zorder=100, label = "Jupiter", fill = False))
             ax.set(xlabel = 'x $(R_J)$', ylabel = 'y $(R_J)$')
-            np.save('pensionerov_footprint_north.npy', pensionerov, allow_pickle=True)
-            np.save('ray_footprint_north.npy', ray, allow_pickle= True)
+            np.save('pensionerov_footprint_south.npy', pensionerov, allow_pickle=True)
+            np.save('ray_footprint_north_south.npy', ray, allow_pickle= True)
         else:
             ray = self.vip.analyse_cross_points(model = 'ray', footprint=True)
             pensionerov = self.vip.analyse_cross_points(model= 'pensionerov', footprint=True)
@@ -3579,10 +3581,10 @@ class comparisons:
         plt.show()
 
     def compare_models_footprints_pre_calculated(self):
-        ray = np.load('ray_footprint_north.npy', allow_pickle=True)
-        pensionerov = np.load('pensionerov_footprint_north.npy', allow_pickle=True)
+        ray = np.load('ray_footprint.npy', allow_pickle=True)
+        pensionerov = np.load('pensionerov_footprint.npy', allow_pickle=True)
         fig, ax = plt.subplots()
-        ax.plot(ray[0], ray[1], label = 'Ray Model', color = 'k')
+        ax.plot(ray[0], -ray[1], label = 'Ray Model', color = 'k')
         ax.plot(pensionerov[0], pensionerov[1], label = 'Pensionerov Model', color = 'r')
         ax.add_patch(Circle((0,0), 1, color='y', zorder=100, label = "Jupiter", fill = False))
         ax.set(xlabel = 'x $(R_J)$', ylabel = 'y $(R_J)$')
