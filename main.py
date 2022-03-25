@@ -3025,7 +3025,8 @@ class main:
                 azimuthals.append(r*Rj*omega*omega_J)
             #azimuthals_km = np.array(azimuthals)/1e3
             ax.plot(ang_vel_rs, ang_vel, label = 'Ray Model', color = "peru")
-        #ax.axvline(x = 18, label= 'Approximate Decoupling Radius', color = 'firebrick', linestyle = '--')
+        ax.axvline(x = 18, label= 'Approximate Decoupling Radius', color = 'firebrick', linestyle = '--')
+        ax.axvline(x = 26, label = 'Approximate location where $v_r > v_A$', color = 'lightcoral', linestyle = '--')
         ax.legend()
         ax.set(ylabel = 'Angular Velocity ($\u03A9_J$)', xlabel = 'r ($R_J$)')
         plt.show()
@@ -3157,9 +3158,9 @@ class main:
                     cent_eq_latitude = self.centrifugal_equator(r, phi_rh_rad)
                     colatitude = np.pi/2 - cent_eq_latitude
                 if footprint_direction == 'north':
-                    footprint_point = self.trace_magnetic_field(starting_cordinates=[r*Rj, colatitude, phi_lh_rad], footprint=True, break_point=1.0, step = 0.001, pathing='backward')
+                    footprint_point = self.trace_magnetic_field(starting_cordinates=[r*Rj, colatitude, phi_lh_rad], footprint=True, break_point=1.0, step = 0.001, pathing='backward', one_way='on')
                 else:
-                    footprint_point = self.trace_magnetic_field(starting_cordinates=[r*Rj, colatitude, phi_lh_rad], footprint=True, break_point=1.0, step = 0.001)
+                    footprint_point = self.trace_magnetic_field(starting_cordinates=[r*Rj, colatitude, phi_lh_rad], footprint=True, break_point=1.0, step = 0.001, one_way='on')
                 footprints.append(footprint_point)
                 footprints_xy.append([footprint_point[0],footprint_point[1]])
 
@@ -3346,7 +3347,7 @@ system = main('VIP4', 'no')
 #system.find_cross_points_lray(360)
 #system.find_cross_points_pensionerov(360)
 #ystem.plot_va_vo_cross_points()
-#system.pensionerov_ang_vel_recreate(azimuthal=True)
+system.pensionerov_ang_vel_recreate(azimuthal=True)
 
 
 
@@ -3593,12 +3594,12 @@ class comparisons:
         plt.show()
     
     def compare_all_decoupling_pre_calculated(self):
-        ray = np.load('ray_footprint_north.npy', allow_pickle=True)
-        pensionerov = np.load('pensionerov_footprint_north.npy', allow_pickle=True)
+        #ray = np.load('ray_footprint_north.npy', allow_pickle=True)
+        #pensionerov = np.load('pensionerov_footprint_north.npy', allow_pickle=True)
         outflow = np.load('outflow_footprints.npy', allow_pickle=True)
         fig, ax = plt.subplots()
-        ax.plot(ray[0], ray[1], label = 'Ray Model', color = 'k')
-        ax.plot(pensionerov[0], pensionerov[1], label = 'Pensionerov Model', color = 'r')
+        #ax.plot(ray[0], ray[1], label = 'Ray Model', color = 'k')
+        #x.plot(pensionerov[0], pensionerov[1], label = 'Pensionerov Model', color = 'r')
         ax.plot(outflow[0], outflow[1], label = 'Radial Outflow Decoupling', color = 'c')
         ax.add_patch(Circle((0,0), 1, color='y', zorder=100, label = "Jupiter", fill = False))
         ax.set(xlabel = 'x $(R_J)$', ylabel = 'y $(R_J)$')
@@ -3607,7 +3608,7 @@ class comparisons:
         plt.show()
 comparisons = comparisons()
 #comparisons.compare_all_decoupling_pre_calculated()
-comparisons.compare_models_footprints_pre_calculated()
+#comparisons.compare_models_footprints_pre_calculated()
 #comparisons.compare_n_along_field_line(logplot='on', startpoint=[10, np.pi/2, 290.8 *np.pi/180])
 #comparisons.compare_models_crosses()
 #omparisons.compare_models_footprints_calc(direction='north')
