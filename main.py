@@ -2565,7 +2565,9 @@ class main:
             for i in range(len(ang_vel_rs)):
                 r = ang_vel_rs[i]
                 omega = ang_vel[i]
-                azimuthals.append(r*Rj*omega*omega_J)
+                azimuthals.append((omega_J-omega*omega_J)*r*Rj)
+                #zimuthals.append((omega*omega_J)*r*Rj)
+            #print(azimuthals)
             azimuthals_km = np.array(azimuthals)/1e3
             if show:
                 ax.plot(ang_vel_rs, azimuthals_km, label = 'Azimuthal Velocity (Dipole Approx. {} = 2000kg/s)'.format(u'\u1E41'))
@@ -2604,7 +2606,7 @@ class main:
         return mdot_crossing
 
     def find_va_vphi_cross_point_lray(self, phi_lh_deg):
-        results = self.db6_better(phi_lh_deg=phi_lh_deg, mdots=[2000], stop = 80, azimuthal=True, show= False)
+        results = self.db6_better(phi_lh_deg=phi_lh_deg, mdots=[2000], stop = 80, azimuthal=True, show= False, numpoints=400)
         vas = results[1]
         vas_rs = results[2]
         azis = results[3]
@@ -2626,7 +2628,7 @@ class main:
             
 
     def find_va_vphi_cross_point_pensionerov(self, phi_lh_deg):
-        results = self.db6_better(phi_lh_deg=phi_lh_deg, mdots=[2000], stop = 80, azimuthal=True, show= False)
+        results = self.db6_better(phi_lh_deg=phi_lh_deg, mdots=[2000], stop = 80, azimuthal=True, show= False, numpoints=400)
         vas = results[1]
         vas_rs = results[2]
         lt = self.what_LT_segment(phi_lh_deg=phi_lh_deg)
@@ -2645,6 +2647,7 @@ class main:
             r = rs_vels[0][i]
             omega = rs_vels[1][i]
             azis.append(r*Rj*omega*omega_J)
+            azis.append((omega_J-omega*omega_J)*r*Rj)
             #print(r, omega, omega_J, r*Rj*omega*omega_J )
             azis_rs.append(r)
         for i in range(len(vas)):
@@ -3056,11 +3059,11 @@ class main:
         phi_outflow_azi = {}
         for phi in phis:
             print('new phi, phi = {}'.format(phi))
-            outflow_crossing = self.find_va_vo_cross_point([2000], phi_lh_deg=phi, numpoints=800)
+            outflow_crossing = self.find_va_vo_cross_point([2000], phi_lh_deg=phi, numpoints=400)
             outflow_crossing_r = outflow_crossing[2000]
             azi_crossing_r = self.find_va_vphi_cross_point_lray(phi_lh_deg=phi)
             phi_outflow_azi[phi] = [outflow_crossing_r, azi_crossing_r]
-        with open('crossing_data.json', 'w') as fp:
+        with open('crossing_data_ray_new.json', 'w') as fp:
             json.dump(phi_outflow_azi, fp, indent=4)
 
     def find_cross_points_pensionerov(self, numpoints = 10):
@@ -3068,20 +3071,20 @@ class main:
         phi_outflow_azi = {}
         for phi in phis:
             print('new phi, phi = {}'.format(phi))
-            outflow_crossing = self.find_va_vo_cross_point([2000], phi_lh_deg=phi, numpoints=800)
+            outflow_crossing = self.find_va_vo_cross_point([2000], phi_lh_deg=phi, numpoints=400)
             outflow_crossing_r = outflow_crossing[2000]
             azi_crossing_r = self.find_va_vphi_cross_point_pensionerov(phi_lh_deg=phi)
             phi_outflow_azi[phi] = [outflow_crossing_r, azi_crossing_r]
-        with open('crossing_data_pensionerov.json', 'w') as fp:
+        with open('crossing_data_pensionerov_new.json', 'w') as fp:
             json.dump(phi_outflow_azi, fp, indent=4)
 
     def analyse_cross_points(self, model = 'ray', winners = False, closest_to_planet = False, outflow_cross_plot = False, furthest_azi_cross = False, footprint = False, 
     show = False, phi_cross_plot = False, outflow_footprint = False, footprint_direction = 'south'):
         if model == 'ray':
-            with open('crossing_data.json') as json_file:
+            with open('crossing_data_ray_new.json') as json_file:
                 data = json.load(json_file)
         if model == 'pensionerov':
-            with open('crossing_data_pensionerov.json') as json_file:
+            with open('crossing_data_pensionerov_new.json') as json_file:
                 data = json.load(json_file)
         if model == 'test':
             with open('test.json') as json_file:
@@ -3342,12 +3345,17 @@ class main:
         plt.show()
 start_time = time.time()
 system = main('VIP4', 'no')
+#system.db6_better(azimuthal=True, phi_lh_deg=200.8)
+#system.find_cross_points_lray(numpoints=360)
+#system.find_cross_points_pensionerov(numpoints=360)
+system.analyse_cross_points(model='ray', winners=True, phi_cross_plot=True, show = True)
+system.analyse_cross_points(model='pensionerov', winners= True, phi_cross_plot=True, show=True)
 #print(system.find_va_vo_cross_point(mdots=[2000], phi_lh_deg= 100 ))
 #system.analyse_cross_points(model = 'pensionerov', outflow_footprint=True, show=True)
 #system.find_cross_points_lray(360)
 #system.find_cross_points_pensionerov(360)
 #ystem.plot_va_vo_cross_points()
-system.pensionerov_ang_vel_recreate(azimuthal=True)
+#system.pensionerov_ang_vel_recreate(azimuthal=True)
 
 
 
