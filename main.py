@@ -16,6 +16,7 @@ from matplotlib.colors import TwoSlopeNorm
 from matplotlib.lines import Line2D
 import mpl_toolkits.mplot3d.art3d as art3d
 import matplotlib as mpl
+from sympy import false
 #from sqlalchemy import false
 from Lorch_mag_field_models import field_models
 import scipy
@@ -566,6 +567,7 @@ class main:
         input start point (r, theta, phi) where r is in rj and phi is left handed 
         return furthest rdial distance reached by that field line 
         '''
+        startpoint[0] = startpoint[0]*Rj
         plot_results = self.trace_magnetic_field(starting_cordinates=startpoint, one_way='off', break_point=2, step = 0.001)
         points = np.array(plot_results[0])
         furthest_r = self.calc_furthest_r(points)
@@ -1010,7 +1012,7 @@ class main:
         levs = np.power(10, lev_exp)
         cont = ax.contourf(gridx, gridy, ns_cm, cmap = 'bone', levels = levs, norm=mcolors.LogNorm())#, locator=ticker.LogLocator())
         ax.add_patch(Circle((0,0), 1, color='y', zorder=100, label = "Jupiter"))
-        ax.add_patch(Circle((0,0), 6, color='c', zorder=2, label = "Io Orbital Radius", Fill = True))
+        ax.add_patch(Circle((0,0), 6, color='c', zorder=2, label = "Io Orbital Radius", fill = False))
         ax.legend()
         ax.set_xlim(-gridsize,gridsize)
         ax.set_ylim(-gridsize,gridsize)
@@ -1229,8 +1231,9 @@ class main:
         #print(levs, levs.size)
         if show == 'on':
             cont = ax.contourf(grids, gridz, densities_cm_edits, cmap = 'bone', levels = levs, norm=mcolors.LogNorm())#, locator=ticker.LogLocator()) #, levels = 14)
+            ax.add_patch(Circle((0,0), 6, color='c', zorder=90, label = "R = $6R_J$", fill = False))
         ax.add_patch(Circle((0,0), 1, color='y', zorder=100, label = "Jupiter"))
-        ax.add_patch(Circle((0,0), 6, color='c', zorder=90, label = "Io Orbital Radius", fill = False))
+        
         ax.text(1.00, 0.01, 'SYS III (LH) Longitutude = {:.1f}{} '.format(phi_lh, u"\N{DEGREE SIGN}"),
         verticalalignment='bottom', horizontalalignment='right',
         transform=ax.transAxes,
@@ -1243,10 +1246,10 @@ class main:
         verticalalignment='top', horizontalalignment='left',
         transform=ax.transAxes,
         color='w', fontsize=16)
-        ax.text(0.05, 0.05, 'CML 201 $\u03BB_{III}$',
-        verticalalignment='top', horizontalalignment='left',
-        transform=ax.transAxes,
-        color='w', fontsize=16)
+        #ax.text(0.05, 0.05, 'CML 201 $\u03BB_{III}$',
+        #verticalalignment='top', horizontalalignment='left',
+        #transform=ax.transAxes,
+        #color='w', fontsize=16)
         if field_line == 'on':
             plot_results = self.trace_magnetic_field(starting_cordinates=[field_line_r*Rj, np.pi/2 ,phi_lh_rad], one_way=one_way, break_point=2, step = 0.001)
             points = np.array(plot_results[0])
@@ -1880,8 +1883,15 @@ class main:
         color_index = 0
         angle_time_dictionary = {}
         for point in startingPoints:
-            print('New Startpoint!')
+            print('New Startpoint! {} to go'.format(len(startingPoints) - startingPoints.index(point)))
+            phi_rh_rad = point[2] 
+            if self.aligned == 'no':
+                cent_eq_latitude = self.centrifugal_equator(r, phi_rh_rad)
+                colatitude = np.pi/2 - cent_eq_latitude
+            else:
+                colatitude = np.pi/2
             point[2] = 2*np.pi - point[2]
+            point[1] = colatitude
             phi_lh = point[2]
             phi_lh_deg = phi_lh * 180/np.pi
             calc = self.travel_time(startpoint=point, print_time='off', direction = direction)
@@ -2497,15 +2507,24 @@ class main:
             startingPoints.append([r, np.pi/2, n*spacing])
             phis.append(n*spacing*180/np.pi)
         for point in startingPoints:
-            print('New Startpoint, ', point)
+            
+            
             phi_lh = point[2]
+            if self.aligned == 'yes':
+                   colatitude = np.pi/2
+            if self.aligned == 'no': 
+                cent_eq_latitude = self.centrifugal_equator(r, 2*np.pi - phi_lh)
+                colatitude = np.pi/2 - cent_eq_latitude
+            point[1] = colatitude
+            print('New Startpoint, ', point)
             phi_lh_deg = phi_lh * 180/np.pi
-            calc_f = self.travel_time(startpoint=point, print_time='on', direction = 'forward')
+            calc_f = self.travel_time(startpoint=point, print_time='off', direction = 'forward')
             point[0] = point[0]/Rj
             point[2] = 2*np.pi - point[2]
+            point[1] = colatitude
             print('amended point', point)
             #print('got here, calc_f 0 =', calc_f[0], ' point = ' ,point)
-            calc_b = self.travel_time(startpoint=point, print_time='on', direction = 'backward')
+            calc_b = self.travel_time(startpoint=point, print_time='off', direction = 'backward')
             time_f = calc_f[0]
             time_b = calc_b[0]
             difference = abs(time_b - time_f)
@@ -3028,7 +3047,7 @@ class main:
                 azimuthals.append(r*Rj*omega*omega_J)
             #azimuthals_km = np.array(azimuthals)/1e3
             ax.plot(ang_vel_rs, ang_vel, label = 'Ray Model', color = "peru")
-        ax.axvline(x = 18, label= 'Approximate Decoupling Radius', color = 'firebrick', linestyle = '--')
+        ax.axvline(x = 21.2, label= 'Approximate location where $v_{\u03A6} > v_A$', color = 'firebrick', linestyle = '--')
         ax.axvline(x = 26, label = 'Approximate location where $v_r > v_A$', color = 'lightcoral', linestyle = '--')
         ax.legend()
         ax.set(ylabel = 'Angular Velocity ($\u03A9_J$)', xlabel = 'r ($R_J$)')
@@ -3166,13 +3185,14 @@ class main:
                     footprint_point = self.trace_magnetic_field(starting_cordinates=[r*Rj, colatitude, phi_lh_rad], footprint=True, break_point=1.0, step = 0.001, one_way='on')
                 footprints.append(footprint_point)
                 footprints_xy.append([footprint_point[0],footprint_point[1]])
-
+            
             footprints_plottable = np.transpose(footprints_xy)
             footprints_plottable_rj = footprints_plottable/Rj
             fig, ax = plt.subplots()
             ax.scatter(footprints_plottable_rj[0], footprints_plottable_rj[1], label = 'Footprint of Plasma Decoupling')
             #ax.add_patch(Circle((0,0), 1, color='firebrick', zorder=100, label = "Jupiter Radii", fill = False))
             ax.legend()
+            np.save('{}_footprint_{}_new.npy'.format(model, footprint_direction), footprints_plottable_rj, allow_pickle=True)
             if show:
                 plt.show()
             return footprints_plottable_rj
@@ -3261,9 +3281,9 @@ class main:
             for i in range(len(ang_vel_rs)):
                 r = ang_vel_rs[i]
                 omega = ang_vel[i]
-                azimuthals.append(r*Rj*omega*omega_J)
+                azimuthals.append(r*Rj*(omega_J-omega*omega_J))
             azimuthals_km = np.array(azimuthals)/1e3
-            ax.plot(ang_vel_rs, azimuthals_km, label = 'Azimuthal Velocity (Ray Model)')
+            ax.plot(ang_vel_rs, azimuthals_km, label = 'Azimuthal Velocity (Hill Model)')
 
         vas_km = np.array(vas)/1000
         ax.plot(rs, vas_km, label = 'Local Alfven Velocity')
@@ -3287,7 +3307,7 @@ class main:
             for i in range(len(rs_vels[0])):
                 r = rs_vels[0][i]
                 omega = rs_vels[1][i]
-                azis.append(r*Rj*omega*omega_J)
+                azis.append(r*Rj*(omega_J-omega*omega_J))
                 #print(r, omega, omega_J, r*Rj*omega*omega_J )
                 azis_rs.append(r)
             azis_km = np.array(azis)/1e3
@@ -3295,7 +3315,7 @@ class main:
         ax.legend()
         ax.yaxis.set_ticks_position('both')
         plt.yscale("log")
-        #ax.set_ylim(1,1000)
+        ax.set_ylim(1,1000)
         #ax.set_xlim(0,100)
         #ax.set(title = 'Radial Outflow Along Centrifugal Equator And Local Alfven Velocity \n For $\u03BB_{{III}} $ Longitude of {:.1f}{} '.format(phi_lh_deg, u"\N{DEGREE SIGN}"),
         ax.set(xlabel = 'R ($R_J$)',ylabel = 'Velocity ($kms^{-1}$)')
@@ -3345,20 +3365,23 @@ class main:
         plt.show()
 start_time = time.time()
 system = main('VIP4', 'no')
-#system.db6_better(azimuthal=True, phi_lh_deg=200.8)
-#system.find_cross_points_lray(numpoints=360)
-#system.find_cross_points_pensionerov(numpoints=360)
-system.analyse_cross_points(model='ray', winners=True, phi_cross_plot=True, show = True)
-system.analyse_cross_points(model='pensionerov', winners= True, phi_cross_plot=True, show=True)
-#print(system.find_va_vo_cross_point(mdots=[2000], phi_lh_deg= 100 ))
-#system.analyse_cross_points(model = 'pensionerov', outflow_footprint=True, show=True)
-#system.find_cross_points_lray(360)
-#system.find_cross_points_pensionerov(360)
-#ystem.plot_va_vo_cross_points()
-#system.pensionerov_ang_vel_recreate(azimuthal=True)
+#system.density_topdown_contour(gridsize=60)
+system.db6_no_outflow(200.8, 200, 60, True, True, True, True)
+#system.analyse_cross_points(model = 'pensionerov', closest_to_planet=True)
+#system.db6_no_outflow(200.8, corotation=True, ray=True, pensionerov=True)
+#system.plot_angle_vs_time(num = 360, r = 20)
+#system.difference_in_tt_multi(r = 20, num = 360)
+'''
+system.analyse_cross_points(model = 'ray', footprint=True, footprint_direction='north')
+print('\n ONE DONE \n')
+system.analyse_cross_points(model = 'ray', footprint=True, footprint_direction='south')
+print('\n TWO DONE \n')
+system.analyse_cross_points(model = 'pensionerov', footprint=True, footprint_direction='north')
+print('\n THREE   DONE \n')
+system.analyse_cross_points(model = 'pensionerov', footprint=True, footprint_direction='south')
+'''
 
-
-
+#print(system.find_furthest_r_single_input([10,0,np.pi/2]))
 class comparisons:
     def __init__(self):
         self.dip = main('dipole', 'yes')
@@ -3583,10 +3606,10 @@ class comparisons:
         ray = self.vip.analyse_cross_points(model = 'ray', phi_cross_plot=True)
         pensionerov = self.vip.analyse_cross_points(model= 'pensionerov', phi_cross_plot=True)
         fig, ax = plt.subplots()
-        ax.plot(ray[0], ray[1], label = 'Ray Model', color = 'k')
+        ax.plot(ray[0], ray[1], label = 'Hill Model', color = 'k')
         ax.plot(pensionerov[0], pensionerov[1], label = 'Pensionerov Model', color = 'r')
         ax.legend()
-        ax.set(xlabel = 'Distance Where $v_{\u03A6} > v_A$ ($R_J)$', ylabel = '$\u03BB_{{III}} (Degrees)$')
+        ax.set(ylabel = 'Distance Where $v_{\u03A6} > v_A$ ($R_J)$', xlabel = '$\u03BB_{{III}}$ (Degrees)')
         plt.show()
 
     def compare_models_footprints_pre_calculated(self):
@@ -3602,19 +3625,23 @@ class comparisons:
         plt.show()
     
     def compare_all_decoupling_pre_calculated(self):
-        #ray = np.load('ray_footprint_north.npy', allow_pickle=True)
-        #pensionerov = np.load('pensionerov_footprint_north.npy', allow_pickle=True)
-        outflow = np.load('outflow_footprints.npy', allow_pickle=True)
+        #ray = np.load('ray_footprint_south_new.npy', allow_pickle=True)
+        pensionerov = np.load('pensionerov_footprint_south_new.npy', allow_pickle=True)
+        #outflow = np.load('outflow_footprints.npy', allow_pickle=True)
         fig, ax = plt.subplots()
-        #ax.plot(ray[0], ray[1], label = 'Ray Model', color = 'k')
-        #x.plot(pensionerov[0], pensionerov[1], label = 'Pensionerov Model', color = 'r')
-        ax.plot(outflow[0], outflow[1], label = 'Radial Outflow Decoupling', color = 'c')
+        #ax.plot(ray[0], -ray[1], label = 'Ray Model', color = 'k')
+        ax.plot(pensionerov[0], -pensionerov[1], label = 'Footprint of Plasma Decoupling', color = 'r')
+        #ax.plot(outflow[0], outflow[1], label = 'Radial Outflow Decoupling', color = 'c')
         ax.add_patch(Circle((0,0), 1, color='y', zorder=100, label = "Jupiter", fill = False))
         ax.set(xlabel = 'x $(R_J)$', ylabel = 'y $(R_J)$')
         ax.legend()
         ax.set_aspect(aspect='equal')
         plt.show()
 comparisons = comparisons()
+comparisons.compare_models_crosses()
+#comparisons.compare_all_decoupling_pre_calculated()
+#comparisons.compare_models_crosses()
+#comparisons.compare_all_decoupling_pre_calculated()
 #comparisons.compare_all_decoupling_pre_calculated()
 #comparisons.compare_models_footprints_pre_calculated()
 #comparisons.compare_n_along_field_line(logplot='on', startpoint=[10, np.pi/2, 290.8 *np.pi/180])
@@ -3623,7 +3650,7 @@ comparisons = comparisons()
 #comparisons.compare_B_radial_dip_vs_vip(110.8)
 #comparisons.compare_B_radial_dip_vs_vip(200.8)
 #comparisons.compare_va_distance_from_planet([10, np.pi/2, 200.8*np.pi/180], breakpoint = 2)
-#comparisons.compare_va_along_field_latitude([10, np.pi/2, 290.8*np.pi/180], breakpoint = 6, limits='on', min_point=True, logplot='on')
+comparisons.compare_va_along_field_latitude([10, np.pi/2, 200.8*np.pi/180], breakpoint = 6, limits='off', min_point=True, logplot='on')
 #comparisons.compare_alfven_at_point([10, 90, 290.8])
 #comparisons.compare_n_along_field_line([10, np.pi/2, 200.8*np.pi/180], logplot='on')
 #comparisons.compare_dist_from_planet_lat([10, np.pi/2, 200.8*np.pi/1)
